@@ -1,9 +1,8 @@
-import express, { Request, Response } from "express";
-import fetch, { RequestInit } from "node-fetch";
-(global as any).fetch = fetch;
+import express from "express";
+import fetch from "node-fetch";
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 interface EspnStatsResponse {
   splitCategories?: Array<{
@@ -19,8 +18,8 @@ interface EspnStatsResponse {
 
 app.use(express.json());
 
-app.get("/api/hello", (req: Request, res: Response) => {
-  res.json({ message: "Hello from server!" });
+app.get("/", (req, res) => {
+  res.send("Backend is running");
 });
 
 app.get("/api/espn/player/:id", async (req, res) => {
@@ -56,6 +55,6 @@ app.get("/api/espn/player/:id", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

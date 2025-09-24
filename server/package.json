@@ -1,9 +1,10 @@
 {
   "name": "my-backend",
   "version": "1.0.0",
-  "main": "server.ts",
+  "main": "dist/server.js",
+  "type": "module",
   "scripts": {
-    "start": "ts-node server.ts",
+    "start": "node dist/server.js",
     "build": "tsc"
   },
   "dependencies": {
@@ -13,8 +14,6 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
-    "@types/node-fetch": "^2.6.13",
-    "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
 }
