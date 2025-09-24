@@ -4,8 +4,9 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "start": "node dist/server.js",
-    "build": "tsc"
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "express": "^4.21.2",
