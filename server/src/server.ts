@@ -55,6 +55,18 @@ app.get("/api/espn/player/:id", async (req, res) => {
   }
 });
 
+app.get("/api/v1/players/nfl", async (req, res) => {
+  try {
+    const data = await fetch("https://api.sleeper.app/v1/players/nfl").then(
+      (r) => r.json()
+    );
+    res.json(data);
+  } catch (err) {
+    console.error("Failed to fetch players from Sleeper", err);
+    res.status(500).json({ error: "Failed to fetch players" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
