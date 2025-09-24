@@ -1,6 +1,6 @@
 import type { Player } from "../types/index";
 
-const API = "/api/v1"; // via Vite proxy; remove /api if not using proxy
+const API = "https://parlay-tracker.onrender.com/api/v1"; // via Vite proxy; remove /api if not using proxy
 
 // Get current NFL state (season/week)
 export async function getNflState(): Promise<{

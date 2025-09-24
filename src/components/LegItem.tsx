@@ -64,7 +64,9 @@ const LegItem: React.FC<LegItemProps> = ({
         const espnId = sleeperToEspn[playerId];
         if (!espnId) throw new Error(`No ESPN mapping for player ${playerId}`);
 
-        const res = await fetch(`/api/espn/player/${espnId}`);
+        const res = await fetch(
+          `https://parlay-tracker.onrender.com/api/espn/player/${espnId}`
+        );
         if (!res.ok) throw new Error("API error");
 
         const data = await res.json();
