@@ -1,5 +1,6 @@
-import express from "express";
-import fetch from "node-fetch";
+import express, { Request, Response } from "express";
+import fetch, { RequestInit } from "node-fetch";
+(global as any).fetch = fetch;
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -18,8 +19,7 @@ interface EspnStatsResponse {
 
 app.use(express.json());
 
-// Example endpoint
-app.get("/api/hello", (req, res) => {
+app.get("/api/hello", (req: Request, res: Response) => {
   res.json({ message: "Hello from server!" });
 });
 
