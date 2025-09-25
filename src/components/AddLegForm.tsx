@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
-import { useParlayStore } from "../store/parlays";
 import type { Parlay, Leg, StatType } from "../types/index";
 import { getAllPlayers, type SleeperPlayer } from "../lib/sleeperPlayers";
+import { supabase } from "../lib/supabase";
 
 interface Props {
   parlay: Parlay;
-  onAddLeg: (parlayId: string, leg: Leg) => void;
-  onCancel?: () => void;
+  onLegAdded: (leg: Leg) => void;
 }
 
-export default function AddLegForm({ parlay, onAddLeg }: Props) {
-  const addLeg = useParlayStore((s) => s.addLeg);
-
+export default function AddLegForm({ parlay, onLegAdded }: Props) {
   const [players, setPlayers] = useState<SleeperPlayer[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<SleeperPlayer | null>(null);
@@ -20,16 +17,14 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   useEffect(() => {
-    getAllPlayers().then((list) => setPlayers(list));
+    getAllPlayers().then(setPlayers);
   }, []);
 
   const filtered = players
     .filter((p) => p.full_name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 10);
 
-  useEffect(() => {
-    setHighlightedIndex(0);
-  }, [search]);
+  useEffect(() => setHighlightedIndex(0), [search]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!filtered.length) return;
@@ -49,19 +44,42 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!selected) return;
 
-    const leg: Omit<Leg, "id" | "order"> = {
-      parlayId: parlay.id,
-      playerId: selected.player_id,
-      statType,
-      target,
-      playerName: selected.full_name,
-      headshotUrl: selected.headshot_url || undefined,
-    };
+    const { data, error } = await supabase
+      .from("legs")
+      .insert([
+        {
+          parlay_id: parlay.id,
+          player_id: selected.player_id,
+          player_name: selected.full_name,
+          stat_type: statType,
+          target,
+          headshot_url: selected.headshot_url || undefined,
+          order_index: parlay.legs.length,
+        },
+      ])
+      .select()
+      .single();
 
-    addLeg(leg as Leg); // store will assign id & order
+    if (error) {
+      console.error("Failed to insert leg", error);
+      return;
+    }
+
+    onLegAdded({
+      id: data.id,
+      parlayId: data.parlay_id,
+      playerId: data.player_id,
+      playerName: data.player_name,
+      statType: data.stat_type,
+      target: data.target,
+      targetValue: data.target,
+      headshotUrl: data.headshot_url,
+      order: data.order_index,
+    });
+
     setSelected(null);
     setTarget(0);
     setSearch("");
@@ -69,6 +87,7 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
 
   return (
     <div className="p-4 border rounded bg-gray-50 space-y-3">
+      {/* Search UI */}
       {!selected ? (
         <div className="relative">
           <input
@@ -78,7 +97,6 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
             onKeyDown={handleKeyDown}
             className="player-dropdown"
           />
-
           {search.length > 0 && filtered.length > 0 && (
             <div className="absolute z-10 w-full bg-white border rounded mt-1 max-h-40 overflow-y-auto shadow">
               {filtered.map((p, idx) => (
@@ -130,6 +148,7 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
         </div>
       )}
 
+      {/* Stat + Target */}
       <div className="flex gap-2 items-center">
         <select
           value={statType}
@@ -142,6 +161,7 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
           <option value="rushingTD">Rushing TDs</option>
           <option value="receivingTD">Receiving TDs</option>
         </select>
+
         <input
           type="number"
           placeholder="Target"
@@ -149,6 +169,7 @@ export default function AddLegForm({ parlay, onAddLeg }: Props) {
           onChange={(e) => setTarget(Number(e.target.value))}
           className="border px-2 py-1 rounded w-24"
         />
+
         <button
           type="button"
           onClick={handleAdd}

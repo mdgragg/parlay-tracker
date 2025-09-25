@@ -1,18 +1,8 @@
 import express from "express";
 import fetch from "node-fetch";
-import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-app.use(
-  cors({
-    origin: "*", // or restrict to your frontend domain: ["https://your-frontend.vercel.app"]
-    methods: ["GET", "POST"],
-  })
-);
-
-app.use(express.json());
 
 interface EspnStatsResponse {
   splitCategories?: Array<{

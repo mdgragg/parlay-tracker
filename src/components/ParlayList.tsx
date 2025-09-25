@@ -1,18 +1,13 @@
 import ParlayCard from "./ParlayCard";
 import type { Parlay } from "../types";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from "@hello-pangea/dnd";
-import { useParlayStore } from "../store/parlays";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 interface Props {
   parlays: Parlay[];
   activeParlayId: string | null;
   setActiveParlayId: (id: string | null) => void;
   onDelete: (id: string) => void;
+  onUpdateParlay: (parlay: Parlay) => void;
 }
 
 export default function ParlayList({
@@ -20,53 +15,52 @@ export default function ParlayList({
   activeParlayId,
   setActiveParlayId,
   onDelete,
+  onUpdateParlay,
 }: Props) {
-  const updateParlayOrder = useParlayStore((s) => s.updateParlayOrder);
+  const savedOrder = localStorage.getItem("parlayOrder");
+  const sortedParlays = savedOrder
+    ? ((JSON.parse(savedOrder) as string[])
+        .map((id) => parlays.find((p) => p.id === id))
+        .filter(Boolean) as Parlay[])
+    : parlays;
 
-  if (!parlays.length) {
-    return (
-      <div className="text-sm text-gray-500">
-        Create a parlay by adding your first leg.
-      </div>
-    );
-  }
-
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = (result: any) => {
     if (!result.destination) return;
-
     const newParlays = Array.from(parlays);
     const [removed] = newParlays.splice(result.source.index, 1);
     newParlays.splice(result.destination.index, 0, removed);
 
-    // Persist the new order
-    updateParlayOrder(newParlays.map((p) => p.id));
+    // Update order locally
+    newParlays.forEach((p, idx) => (p.order = idx));
+    newParlays.forEach((p) => onUpdateParlay(p));
+
+    // Save order in localStorage
+    localStorage.setItem(
+      "parlayOrder",
+      JSON.stringify(newParlays.map((p) => p.id))
+    );
   };
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="parlay-list">
+      <Droppable droppableId="parlays">
         {(provided) => (
-          <div
-            className="space-y-4"
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-          >
-            {parlays.map((parlay, index) => (
-              <Draggable key={parlay.id} draggableId={parlay.id} index={index}>
-                {(dragProvided, snapshot) => (
+          <div ref={provided.innerRef} {...provided.droppableProps}>
+            {sortedParlays.map((p, index) => (
+              <Draggable key={p.id} draggableId={p.id} index={index}>
+                {(dragProvided) => (
                   <div
                     ref={dragProvided.innerRef}
                     {...dragProvided.draggableProps}
                     {...dragProvided.dragHandleProps}
-                    className={`${
-                      snapshot.isDragging ? "bg-gray-50" : ""
-                    } rounded`}
+                    className="mb-4"
                   >
                     <ParlayCard
-                      parlay={parlay}
-                      isActive={activeParlayId === parlay.id}
+                      parlay={p}
+                      isActive={activeParlayId === p.id}
                       setActiveParlayId={setActiveParlayId}
                       onDelete={onDelete}
+                      onUpdateParlay={onUpdateParlay}
                     />
                   </div>
                 )}

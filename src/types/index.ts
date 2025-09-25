@@ -22,12 +22,14 @@ export interface Leg {
   target: number;
   parlayId: string; // ties leg to a parlay/group
   order?: number;
+  targetValue: number;
 }
 
 export interface Parlay {
   id: string;
   name: string;
   order?: number;
+  legs: Leg[];
 }
 
 export interface SeasonTotals {

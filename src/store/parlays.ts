@@ -9,7 +9,7 @@ type State = {
 
 type Actions = {
   addParlay: (name: string) => string;
-  addLeg: (leg: Leg) => string;
+  addLeg: (leg: Omit<Leg, "id" | "order">) => string;
   removeLeg: (id: string) => void;
   removeParlay: (parlayId: string) => void;
   updateLegOrder: (parlayId: string, legIds: string[]) => void;
@@ -21,11 +21,8 @@ type Actions = {
   ) => void;
   updateParlayName: (id: string, name: string) => void;
   updateParlayOrder: (ids: string[]) => void;
+  setParlays: (parlays: Record<string, Parlay>) => void; // ✅ Supabase hydration
 };
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 export const useParlayStore = create<State & Actions>()(
   persist(
@@ -33,9 +30,16 @@ export const useParlayStore = create<State & Actions>()(
       parlays: {},
       legs: {},
 
+      setParlays: (parlays) => set(() => ({ parlays })), // ✅ new
+
       addParlay: (name) => {
-        const id = uid();
-        set((s) => ({ parlays: { ...s.parlays, [id]: { id, name } } }));
+        const id = crypto.randomUUID();
+        set((s) => ({
+          parlays: {
+            ...s.parlays,
+            [id]: { id, name, order: Object.keys(s.parlays).length, legs: [] },
+          },
+        }));
         return id;
       },
 
@@ -69,9 +73,10 @@ export const useParlayStore = create<State & Actions>()(
           const { [parlayId]: _, ...parlays } = s.parlays;
           return { legs, parlays };
         }),
+
       updateParlayName: (id, name) =>
         set((state) => {
-          if (!state.parlays[id]) return state; // nothing to update
+          if (!state.parlays[id]) return state;
           return {
             parlays: {
               ...state.parlays,
@@ -79,6 +84,7 @@ export const useParlayStore = create<State & Actions>()(
             },
           };
         }),
+
       updateLegOrder: (parlayId, legIds) =>
         set((s) => {
           const legs = { ...s.legs };
@@ -117,6 +123,6 @@ export const useParlayStore = create<State & Actions>()(
           return { parlays: newParlays };
         }),
     }),
-    { name: "parlay-tracker" }
+    { name: "parlay-tracker" } // local persistence, optional with Supabase
   )
 );

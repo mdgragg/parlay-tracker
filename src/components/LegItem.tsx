@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { sleeperToEspn } from "../lib/sleeperToEspn";
+import { fetchWithCache } from "../lib/cache";
 
 interface LegItemProps {
   playerId: string;
@@ -20,6 +21,7 @@ interface PlayerStats {
   passingYards?: number;
   rushingTouchdowns?: number;
   receivingTouchdowns?: number;
+  gamesPlayed?: number;
 }
 
 interface SleeperState {
@@ -39,45 +41,51 @@ const LegItem: React.FC<LegItemProps> = ({
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState<number>(1);
 
-  // Fetch current NFL state from Sleeper
+  // Fetch current week from Sleeper API
   useEffect(() => {
     async function fetchWeek() {
       try {
         const res = await fetch("https://api.sleeper.app/v1/state/nfl");
         if (!res.ok) throw new Error("Failed to fetch NFL state");
         const data: SleeperState = await res.json();
-        console.log("Sleeper NFL state:", data);
+
+        // Use display_week if available
         setCurrentWeek(data.display_week || data.week || 1);
-        console.log("Sleeper NFL state:", data);
       } catch (err) {
         console.error("Failed to fetch week from Sleeper", err);
-        setCurrentWeek(1); // fallback
+        setCurrentWeek(1);
       }
     }
     fetchWeek();
   }, []);
 
-  // Fetch player stats (still using ESPN mapping)
+  // Fetch player stats from ESPN API (with caching)
   useEffect(() => {
     async function fetchStats() {
-      try {
-        const espnId = sleeperToEspn[playerId];
-        if (!espnId) throw new Error(`No ESPN mapping for player ${playerId}`);
+      const key = `espn-player-${playerId}`;
 
-        const res = await fetch(
-          `https://parlay-tracker.onrender.com/api/espn/player/${espnId}`
-        );
-        if (!res.ok) throw new Error("API error");
+      await fetchWithCache(key, async () => {
+        try {
+          const espnId = sleeperToEspn[playerId];
+          if (!espnId)
+            throw new Error(`No ESPN mapping for player ${playerId}`);
 
-        const data = await res.json();
-        console.log("Fetched stats for", playerName ?? playerId, data.stats);
-        setStats(data.stats);
-      } catch (err) {
-        console.error(err);
-        setStats(null);
-      } finally {
-        setLoading(false);
-      }
+          const res = await fetch(
+            `https://parlay-tracker.onrender.com/api/espn/player/${espnId}`
+          );
+          if (!res.ok) throw new Error("API error");
+
+          const data = await res.json();
+          setStats(data.stats);
+          return data.stats;
+        } catch (err) {
+          console.error(err);
+          setStats(null);
+          return null;
+        } finally {
+          setLoading(false);
+        }
+      });
     }
 
     fetchStats();
@@ -90,7 +98,8 @@ const LegItem: React.FC<LegItemProps> = ({
   if (loading) return <div>Loading stats...</div>;
   if (!stats) return <div>Stats unavailable</div>;
 
-  const current = (() => {
+  // Current total for the stat type
+  const currentTotal = (() => {
     switch (statType) {
       case "rushingYards":
         return Number(stats.rushingYards ?? 0);
@@ -107,10 +116,25 @@ const LegItem: React.FC<LegItemProps> = ({
     }
   })();
 
-  const perWeek = current / Math.max(currentWeek, 1);
-  const projected = perWeek * 17;
-  const percentCurrent = Math.min(100, (current / targetValue) * 100);
+  // Determine games played
+  let gamesPlayed = currentWeek;
+  if (currentTotal === 0) gamesPlayed = 0;
+  if (currentTotal > 0) {
+    const perGameGuess = currentTotal / currentWeek;
+    if (perGameGuess < (targetValue / 17) * 0.5) {
+      gamesPlayed = currentWeek - 1;
+    }
+  }
 
+  const perWeek = currentTotal / Math.max(gamesPlayed, 1);
+  const projected = perWeek * 17;
+
+  // NEW: remaining to target & per-game needed
+  const remaining = Math.max(targetValue - currentTotal, 0);
+  const gamesLeft = Math.max(17 - currentWeek, 0);
+  const perGameNeeded = gamesLeft > 0 ? remaining / gamesLeft : remaining;
+
+  const percentCurrent = Math.min(100, (currentTotal / targetValue) * 100);
   const percentOfTarget = Math.min(100, (projected / targetValue) * 100);
 
   const barColor =
@@ -119,25 +143,6 @@ const LegItem: React.FC<LegItemProps> = ({
       : percentOfTarget >= 90
       ? "#eab308"
       : "#dc2626";
-
-  console.log({
-    player: playerName ?? playerId,
-    current,
-    currentWeek,
-    perWeek,
-    projected,
-    percentCurrent,
-    percentOfTarget,
-  });
-
-  console.log({
-    player: playerName ?? playerId,
-    current,
-    currentWeek,
-    perWeek,
-    projected,
-    percentOfTarget,
-  });
 
   return (
     <div
@@ -157,9 +162,15 @@ const LegItem: React.FC<LegItemProps> = ({
         {statType === "rushingTD" && "Rushing TDs"}
         {statType === "receivingTD" && "Receiving TDs"}
       </p>
-      <p style={{ fontSize: 12 }}>Current: {current}</p>
+      <p style={{ fontSize: 12 }}>Current: {currentTotal}</p>
       <p style={{ fontSize: 12 }}>
         Projected (17 games): {projected.toFixed(1)}
+      </p>
+      <p style={{ fontSize: 12 }}>
+        Remaining to target: {remaining.toFixed(1)}
+      </p>
+      <p style={{ fontSize: 12 }}>
+        Needed per remaining game: {perGameNeeded.toFixed(1)}
       </p>
 
       <div
@@ -175,8 +186,8 @@ const LegItem: React.FC<LegItemProps> = ({
         <div
           style={{
             height: "100%",
-            width: `${percentCurrent}%`, // ✅ actual current progress
-            background: barColor, // ✅ pace-based color
+            width: `${percentCurrent}%`,
+            background: barColor,
             transition: "width 0.5s ease",
           }}
         />
