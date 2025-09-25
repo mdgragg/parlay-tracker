@@ -1,6 +1,93 @@
-/* src/global.css or tailwind.css */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Roboto", sans-serif;
+  font-size: 1em;
+  padding: 1.5rem;
+  margin: 0;
+  background-color: #0e1830;
+  /* background-color: #161c29; */
+  color: white;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-align: center;
+}
+h4 {
+  margin: auto;
+}
+
+.parlay-card {
+  position: relative;
+  background-color: #162447;
+  padding: 5px 15px;
+  margin: 15px auto;
+  max-width: 1200px;
+}
+
+.edit-btn,
+.add-btn,
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  cursor: pointer;
+  border: 1px solid white;
+  font-size: 12px;
+  padding: 0px 5px;
+  opacity: 0.7;
+  border-radius: 20px;
+}
+
+.add-btn {
+  left: 55px;
+  color: #3be489;
+  border: 1px solid #3be489;
+}
+.delete-btn {
+  right: 5px;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+}
+
+.leg-container {
+  position: relative;
+  background-color: #1f2d50;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 8px auto;
+  border: 1px solid #4c5773;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 0px;
+  right: 10px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #4c5773;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.stats {
+  opacity: 0.7;
+  font-size: 12px;
+  text-align: center;
+  width: 100%;
+  display: inline-block;
+}
+
+/* 
 .player-dropdown {
-  max-height: 160px; /* limit height */
+  max-height: 160px;
   overflow-y: auto;
   border: 1px solid #ccc;
   border-radius: 0.25rem;
@@ -18,19 +105,19 @@
 
 .player-dropdown div:hover,
 .player-dropdown .selected {
-  background-color: #e2e8f0; /* light gray */
+  background-color: #e2e8f0; 
 }
 
 .progress-bar-container {
   width: 100%;
   height: 1rem;
-  background-color: #e5e7eb; /* gray-200 */
+  background-color: #e5e7eb; 
   border-radius: 0.25rem;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background-color: #22c55e; /* green-500 */
+  background-color: #22c55e; 
   transition: width 0.3s ease;
-}
+} */

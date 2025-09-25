@@ -8,6 +8,7 @@ interface Props {
   setActiveParlayId: (id: string | null) => void;
   onDelete: (id: string) => void;
   onUpdateParlay: (parlay: Parlay) => void;
+  setParlays: React.Dispatch<React.SetStateAction<Record<string, Parlay>>>;
 }
 
 export default function ParlayList({
@@ -16,14 +17,8 @@ export default function ParlayList({
   setActiveParlayId,
   onDelete,
   onUpdateParlay,
+  setParlays,
 }: Props) {
-  const savedOrder = localStorage.getItem("parlayOrder");
-  const sortedParlays = savedOrder
-    ? ((JSON.parse(savedOrder) as string[])
-        .map((id) => parlays.find((p) => p.id === id))
-        .filter(Boolean) as Parlay[])
-    : parlays;
-
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
     const newParlays = Array.from(parlays);
@@ -39,6 +34,13 @@ export default function ParlayList({
       "parlayOrder",
       JSON.stringify(newParlays.map((p) => p.id))
     );
+
+    // Update state in manager
+    setParlays((prev) => {
+      const copy = { ...prev };
+      newParlays.forEach((p) => (copy[p.id] = p));
+      return copy;
+    });
   };
 
   return (
@@ -46,7 +48,7 @@ export default function ParlayList({
       <Droppable droppableId="parlays">
         {(provided) => (
           <div ref={provided.innerRef} {...provided.droppableProps}>
-            {sortedParlays.map((p, index) => (
+            {parlays.map((p, index) => (
               <Draggable key={p.id} draggableId={p.id} index={index}>
                 {(dragProvided) => (
                   <div

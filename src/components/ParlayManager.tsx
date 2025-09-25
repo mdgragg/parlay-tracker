@@ -13,27 +13,35 @@ export default function ParlayManager() {
   const [parlays, setParlays] = useState<Record<string, Parlay>>({});
   const [activeParlayId, setActiveParlayId] = useState<string | null>(null);
 
+  // Load all parlays and restore order
   useEffect(() => {
     async function fetch() {
-      const data = await loadParlays(); // data: Record<string, Parlay>
+      const data = await loadParlays(); // Record<string, Parlay>
 
-      // Restore order from localStorage for parlays
       const savedOrder = localStorage.getItem("parlayOrder");
-      let orderedParlays: Record<string, Parlay> = {};
+      const order = savedOrder ? (JSON.parse(savedOrder) as string[]) : [];
 
-      if (savedOrder) {
-        const order = JSON.parse(savedOrder) as string[];
-        order.forEach((id) => {
-          if (data[id]) orderedParlays[id] = data[id];
-        });
-      }
-
-      // Add any new parlays not in saved order
-      Object.values(data).forEach((p) => {
-        if (!orderedParlays[p.id]) orderedParlays[p.id] = p;
+      // Build ordered array of parlays
+      const ordered: Parlay[] = [];
+      order.forEach((id) => {
+        if (data[id]) ordered.push(data[id]);
       });
 
-      setParlays(orderedParlays);
+      // Add any missing ones from DB
+      Object.values(data).forEach((p) => {
+        if (!ordered.find((o) => o.id === p.id)) ordered.push(p);
+      });
+
+      // Save back to localStorage to keep in sync
+      localStorage.setItem(
+        "parlayOrder",
+        JSON.stringify(ordered.map((p) => p.id))
+      );
+
+      // Convert back to object for state
+      const obj: Record<string, Parlay> = {};
+      ordered.forEach((p) => (obj[p.id] = p));
+      setParlays(obj);
     }
 
     fetch();
@@ -44,23 +52,44 @@ export default function ParlayManager() {
       `Parlay ${Object.keys(parlays).length + 1}`,
       Object.keys(parlays).length
     );
-    setParlays((prev) => ({ ...prev, [newParlay.id]: newParlay }));
+
+    setParlays((prev) => {
+      const copy = { ...prev, [newParlay.id]: newParlay };
+      const order = Object.values(copy).sort(
+        (a, b) => (a.order ?? 0) - (b.order ?? 0)
+      );
+      localStorage.setItem(
+        "parlayOrder",
+        JSON.stringify(order.map((p) => p.id))
+      );
+      return copy;
+    });
+
     setActiveParlayId(newParlay.id);
   };
 
   const handleUpdateParlay = async (parlay: Parlay) => {
-    const oldParlay = parlays[parlay.id];
-    if (oldParlay && oldParlay.name !== parlay.name) {
-      const newParlay = await replaceParlay(oldParlay, parlay.name);
-      setParlays((prev) => {
-        const copy = { ...prev };
-        delete copy[oldParlay.id];
-        copy[newParlay.id] = newParlay;
-        return copy;
-      });
-      setActiveParlayId(newParlay.id);
-    } else {
-      setParlays((prev) => ({ ...prev, [parlay.id]: parlay }));
+    setParlays((prev) => ({
+      ...prev,
+      [parlay.id]: {
+        ...prev[parlay.id],
+        ...parlay,
+      },
+    }));
+
+    try {
+      if (parlay.id in parlays) {
+        await updateParlay(parlay);
+      } else {
+        const newParlay = await replaceParlay(parlay, parlay.name);
+        setParlays((prev) => ({
+          ...prev,
+          [newParlay.id]: newParlay,
+        }));
+        setActiveParlayId(newParlay.id);
+      }
+    } catch (err) {
+      console.error("Failed to update parlay:", err);
     }
   };
 
@@ -69,14 +98,19 @@ export default function ParlayManager() {
     setParlays((prev) => {
       const copy = { ...prev };
       delete copy[id];
+      // also update order in localStorage
+      localStorage.setItem("parlayOrder", JSON.stringify(Object.keys(copy)));
       return copy;
     });
     if (activeParlayId === id) setActiveParlayId(null);
   };
 
-  const sortedParlays = Object.values(parlays).sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0)
-  );
+  // Build the sorted list to pass down
+  const savedOrder = localStorage.getItem("parlayOrder");
+  const order = savedOrder ? (JSON.parse(savedOrder) as string[]) : [];
+  const sortedParlays: Parlay[] = order
+    .map((id) => parlays[id])
+    .filter(Boolean);
 
   return (
     <div className="space-y-6">
@@ -86,6 +120,7 @@ export default function ParlayManager() {
         setActiveParlayId={setActiveParlayId}
         onDelete={handleDeleteParlay}
         onUpdateParlay={handleUpdateParlay}
+        setParlays={setParlays} // 👈 pass this for drag reorder
       />
       <button
         onClick={handleAddParlay}

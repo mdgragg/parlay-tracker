@@ -79,8 +79,8 @@ export default function ParlayCard({
   };
 
   return (
-    <div className="p-4 border rounded bg-white space-y-3">
-      <div className="flex items-center gap-3">
+    <div className="p-4 border rounded parlay-card space-y-3">
+      <div className="parlay-btns">
         {editingName ? (
           <input
             value={nameInput}
@@ -93,27 +93,21 @@ export default function ParlayCard({
         ) : (
           <>
             <h2 className="text-lg font-semibold">{parlay.name}</h2>
-            <button
-              onClick={() => setEditingName(true)}
-              className="text-xs text-blue-500 underline"
-            >
+            <span onClick={() => setEditingName(true)} className="edit-btn">
               Edit
-            </button>
+            </span>
           </>
         )}
 
-        <button
+        <span
           onClick={() => setActiveParlayId(isActive ? null : parlay.id)}
-          className="px-2 py-1 bg-blue-500 text-white rounded"
+          className="add-btn"
         >
-          Add Leg
-        </button>
-        <button
-          onClick={() => onDelete(parlay.id)}
-          className="px-2 py-1 bg-red-500 text-white rounded"
-        >
-          Delete
-        </button>
+          +
+        </span>
+        <span onClick={() => onDelete(parlay.id)} className="delete-btn">
+          -
+        </span>
       </div>
 
       {parlayLegs.length === 0 ? (
@@ -144,14 +138,15 @@ export default function ParlayCard({
                             statType={leg.statType}
                             targetValue={leg.target}
                             playerName={leg.playerName}
+                            onRemove={() => handleRemoveLeg(leg.id)}
                           />
                         </div>
-                        <button
+                        {/* <button
                           onClick={() => handleRemoveLeg(leg.id)}
-                          className="text-sm text-gray-600 underline self-start"
+                          className="delete"
                         >
                           Remove
-                        </button>
+                        </button> */}
                       </div>
                     )}
                   </Draggable>

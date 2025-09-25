@@ -12,6 +12,7 @@ interface LegItemProps {
     | "receivingTD";
   targetValue: number;
   playerName?: string;
+  onRemove?: () => void;
 }
 
 interface PlayerStats {
@@ -36,6 +37,7 @@ const LegItem: React.FC<LegItemProps> = ({
   statType,
   targetValue,
   playerName,
+  onRemove,
 }) => {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,50 +141,24 @@ const LegItem: React.FC<LegItemProps> = ({
 
   const barColor =
     percentOfTarget >= 100
-      ? "#16a34a"
+      ? "#3be489"
       : percentOfTarget >= 90
       ? "#eab308"
       : "#dc2626";
 
   return (
-    <div
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-        background: "#fff",
-      }}
-    >
+    <div className="leg-container">
       <h4 style={{ fontWeight: 600 }}>{playerName ?? playerId}</h4>
-      <p style={{ fontSize: 12, color: "#555" }}>
+      <span className="stats">
         Target: {targetValue} {statType === "rushingYards" && "Rushing Yards"}
         {statType === "receivingYards" && "Receiving Yards"}
         {statType === "passingYards" && "Passing Yards"}
         {statType === "rushingTD" && "Rushing TDs"}
-        {statType === "receivingTD" && "Receiving TDs"}
-      </p>
-      <p style={{ fontSize: 12 }}>Current: {currentTotal}</p>
-      <p style={{ fontSize: 12 }}>
-        Projected (17 games): {projected.toFixed(1)}
-      </p>
-      <p style={{ fontSize: 12 }}>
-        Remaining to target: {remaining.toFixed(1)}
-      </p>
-      <p style={{ fontSize: 12 }}>
-        Needed per remaining game: {perGameNeeded.toFixed(1)}
-      </p>
-
-      <div
-        style={{
-          width: "100%",
-          height: 16,
-          background: "#e5e7eb",
-          borderRadius: 8,
-          overflow: "hidden",
-          marginTop: 4,
-        }}
-      >
+        {statType === "receivingTD" && "Receiving TDs"} | Current:{" "}
+        {currentTotal} | Projected: {projected.toFixed(1)} | Needs:{" "}
+        {remaining.toFixed(1)} | Needs per games : {perGameNeeded.toFixed(1)}
+      </span>{" "}
+      <div className="progress-bar">
         <div
           style={{
             height: "100%",
@@ -192,6 +168,11 @@ const LegItem: React.FC<LegItemProps> = ({
           }}
         />
       </div>
+      {onRemove && (
+        <span onClick={onRemove} className="remove-btn">
+          -
+        </span>
+      )}
     </div>
   );
 };
