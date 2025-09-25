@@ -21,7 +21,7 @@ type Actions = {
   ) => void;
   updateParlayName: (id: string, name: string) => void;
   updateParlayOrder: (ids: string[]) => void;
-  setParlays: (parlays: Record<string, Parlay>) => void; // ✅ Supabase hydration
+  setParlays: (parlays: Record<string, Parlay>) => void;
 };
 
 export const useParlayStore = create<State & Actions>()(
@@ -30,7 +30,7 @@ export const useParlayStore = create<State & Actions>()(
       parlays: {},
       legs: {},
 
-      setParlays: (parlays) => set(() => ({ parlays })), // ✅ new
+      setParlays: (parlays) => set(() => ({ parlays })),
 
       addParlay: (name) => {
         const id = crypto.randomUUID();
