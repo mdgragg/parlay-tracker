@@ -6,7 +6,28 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+app.use(express.json());
 
+// --- In-memory cache ---
+interface CacheItem {
+  data: any;
+  expiry: number;
+}
+const cache: Record<string, CacheItem> = {};
+
+async function fetchWithCache(url: string, ttlMs = 60_000) {
+  const cached = cache[url];
+  if (cached && cached.expiry > Date.now()) {
+    return cached.data;
+  }
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Fetch error ${response.status}`);
+  const data = await response.json();
+  cache[url] = { data, expiry: Date.now() + ttlMs };
+  return data;
+}
+
+// --- Interfaces ---
 interface EspnStatsResponse {
   splitCategories?: Array<{
     name: string;
@@ -30,32 +51,25 @@ interface EspnScoreboardResponse {
   }>;
 }
 
-app.use(express.json());
-
+// --- Routes ---
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
+// --- ESPN Player Stats ---
 app.get("/api/espn/player/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`ESPN API error: ${response.status}`);
-    }
+    const data: EspnStatsResponse = await fetchWithCache(url, 5 * 60_000); // cache 5 min
 
-    const data = (await response.json()) as EspnStatsResponse;
-
-    // Use splitCategories instead of categories
     const splitCategory = data.splitCategories?.find((c) => c.name === "split");
     const allSplits = splitCategory?.splits?.find(
       (s) => s.displayName === "All Splits"
     );
 
-    if (!allSplits) {
+    if (!allSplits)
       return res.status(404).json({ error: "No 'All Splits' stats found" });
-    }
 
     const stats: Record<string, string | number> = {};
     data.names.forEach((name, i) => {
@@ -69,11 +83,11 @@ app.get("/api/espn/player/:id", async (req, res) => {
   }
 });
 
-app.get("/api/v1/players/nfl", async (req, res) => {
+// --- All NFL players from Sleeper ---
+app.get("/api/v1/players/nfl", async (_req, res) => {
   try {
-    const data = await fetch("https://api.sleeper.app/v1/players/nfl").then(
-      (r) => r.json()
-    );
+    const url = "https://api.sleeper.app/v1/players/nfl";
+    const data = await fetchWithCache(url, 60 * 60_000); // cache 1 hour
     res.json(data);
   } catch (err) {
     console.error("Failed to fetch players from Sleeper", err);
@@ -81,19 +95,27 @@ app.get("/api/v1/players/nfl", async (req, res) => {
   }
 });
 
+// --- ESPN Scores by week (parallelized) ---
 app.get("/api/espn/scores/:week", async (req, res) => {
   const { week } = req.params;
   const maxWeek = Number(week);
   const gamesPlayed: Record<string, number> = {};
 
   try {
-    for (let w = 1; w <= maxWeek; w++) {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${w}`;
-      const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`ESPN scoreboard error: ${response.status}`);
-      const data = (await response.json()) as EspnScoreboardResponse;
+    const urls = Array.from(
+      { length: maxWeek },
+      (_, i) =>
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${
+          i + 1
+        }`
+    );
 
+    // fetch all weeks in parallel
+    const jsons: EspnScoreboardResponse[] = await Promise.all(
+      urls.map((url) => fetchWithCache(url, 5 * 60_000)) // cache 5 min
+    );
+
+    jsons.forEach((data) => {
       data.events.forEach((game: any) => {
         const home = game.competitions[0].competitors[0].team.abbreviation;
         const away = game.competitions[0].competitors[1].team.abbreviation;
@@ -103,7 +125,7 @@ app.get("/api/espn/scores/:week", async (req, res) => {
           gamesPlayed[away] = (gamesPlayed[away] || 0) + 1;
         }
       });
-    }
+    });
 
     res.json(gamesPlayed);
   } catch (err) {

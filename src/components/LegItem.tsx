@@ -25,13 +25,6 @@ interface PlayerStats {
   gamesPlayed?: number;
 }
 
-interface SleeperState {
-  week: number;
-  display_week: number;
-  season_type: string;
-  [key: string]: any;
-}
-
 interface Scoreboard {
   [team: string]: number;
 }
@@ -45,110 +38,48 @@ const LegItem: React.FC<LegItemProps> = ({
 }) => {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [scoreboard, setScoreboard] = useState<Scoreboard>({});
+  const [currentWeek, setCurrentWeek] = useState<number>(1);
   const playerInfo = sleeperToEspn[playerId];
 
-  // // Fetch current week from Sleeper API
-  // useEffect(() => {
-  //   async function fetchWeek() {
-  //     try {
-  //       const res = await fetch("https://api.sleeper.app/v1/state/nfl");
-  //       if (!res.ok) throw new Error("Failed to fetch NFL state");
-  //       const data: SleeperState = await res.json();
-
-  //       // Use display_week if available
-  //       setCurrentWeek(data.display_week || data.week || 1);
-  //     } catch (err) {
-  //       console.error("Failed to fetch week from Sleeper", err);
-  //       setCurrentWeek(1);
-  //     }
-  //   }
-  //   fetchWeek();
-  // }, []);
-
-  //   useEffect(() => {
-  //   async function fetchScoreboard() {
-  //     try {
-  //       const res = await fetch(`https://parlay-tracker.onrender.com/api/espn/scores/${currentWeek}`);
-  //       const data: Scoreboard = await res.json();
-  //       setScoreboard(data);
-  //     } catch (err) {
-  //       console.error(err);
-  //     }
-  //   }
-  //   if (currentWeek) fetchScoreboard();
-  // }, [currentWeek]);
-
-  // // Fetch player stats from ESPN API (with caching)
-  // useEffect(() => {
-  //   async function fetchStats() {
-  //     const key = `espn-player-${playerId}`;
-
-  //     await fetchWithCache(key, async () => {
-  //       try {
-  //         const espnId = sleeperToEspn[playerId];
-  //         if (!espnId)
-  //           throw new Error(`No ESPN mapping for player ${playerId}`);
-
-  //         const res = await fetch(
-  //           `https://parlay-tracker.onrender.com/api/espn/player/${espnId}`
-  //         );
-  //         if (!res.ok) throw new Error("API error");
-
-  //         const data = await res.json();
-  //         setStats(data.stats);
-  //         return data.stats;
-  //       } catch (err) {
-  //         console.error(err);
-  //         setStats(null);
-  //         return null;
-  //       } finally {
-  //         setLoading(false);
-  //       }
-  //     });
-  //   }
-
-  //   fetchStats();
-
-  //   const handler = () => fetchStats();
-  //   window.addEventListener("refreshLegs", handler);
-  //   return () => window.removeEventListener("refreshLegs", handler);
-  // }, [playerId, playerName]);
-
-  // Fetch current week
+  // Fetch current week & scoreboard in parallel
   useEffect(() => {
-    async function fetchWeek() {
+    async function fetchWeekAndScoreboard() {
       try {
-        const res = await fetch("https://api.sleeper.app/v1/state/nfl");
-        const data: SleeperState = await res.json();
-        setCurrentWeek(data.display_week || data.week || 1);
-      } catch (err) {
-        setCurrentWeek(1);
-      }
-    }
-    fetchWeek();
-  }, []);
+        const [stateRes, scoreboardRes] = await Promise.all([
+          fetchWithCache(
+            "nfl-state",
+            async () => {
+              const res = await fetch("https://api.sleeper.app/v1/state/nfl");
+              return res.json();
+            },
+            1000 * 60 * 10
+          ), // 10 min TTL
+          fetchWithCache(
+            `scoreboard-week-${currentWeek}`,
+            async () => {
+              const res = await fetch(
+                `https://parlay-tracker.onrender.com/api/espn/scores/${currentWeek}`
+              );
+              return res.json();
+            },
+            1000 * 60 * 5
+          ), // 5 min TTL
+        ]);
 
-  // Fetch scoreboard for this week
-  useEffect(() => {
-    async function fetchScoreboard() {
-      try {
-        const res = await fetch(
-          `https://parlay-tracker.onrender.com/api/espn/scores/${currentWeek}`
-        );
-        const data: Scoreboard = await res.json();
-        setScoreboard(data);
+        setCurrentWeek(stateRes.display_week || stateRes.week || 1);
+        setScoreboard(scoreboardRes || {});
       } catch (err) {
         console.error(err);
       }
     }
-    if (currentWeek) fetchScoreboard();
+
+    fetchWeekAndScoreboard();
   }, [currentWeek]);
 
-  // Fetch player stats
+  // Fetch player stats lazily, only when component mounts
   useEffect(() => {
-    async function fetchStats() {
+    async function fetchPlayerStats() {
       const key = `espn-player-${playerId}`;
       await fetchWithCache(key, async () => {
         try {
@@ -166,7 +97,8 @@ const LegItem: React.FC<LegItemProps> = ({
         }
       });
     }
-    fetchStats();
+
+    fetchPlayerStats();
   }, [playerId]);
 
   if (loading) return <div>Loading stats...</div>;
@@ -211,18 +143,17 @@ const LegItem: React.FC<LegItemProps> = ({
       <h4 style={{ fontWeight: 600 }}>{playerName ?? playerId}</h4>
       <span className="stats">
         <b>
-          {" "}
-          {targetValue} {statType === "rushingYards" && "Rushing Yards"}{" "}
+          {statType === "rushingYards" && "Rushing Yards"}
+          {statType === "receivingYards" && "Receiving Yards"}
+          {statType === "passingYards" && "Passing Yards"}
+          {statType === "rushingTD" && "Rushing TDs"}
+          {statType === "receivingTD" && "Receiving TDs"} ({targetValue})
         </b>
-        {statType === "receivingYards" && "Receiving Yards"}
-        {statType === "passingYards" && "Passing Yards"}
-        {statType === "rushingTD" && "Rushing TDs"}
-        {statType === "receivingTD" && "Receiving TDs"}| Current: {currentTotal}{" "}
-        | Games Played: {gamesPlayed} | Current Per Game:{" "}
-        {gamesPlayed > 0 ? (currentTotal / gamesPlayed).toFixed(1) : "0.0"}|
-        Projected: {projected.toFixed(1)}| Needs: {remaining.toFixed(1)}| Needs
-        per games : {perGameNeeded.toFixed(1)}
-      </span>{" "}
+        | Current: {currentTotal} | Games Played: {gamesPlayed} | Current Per
+        Game: {gamesPlayed > 0 ? perGame.toFixed(1) : "0.0"} | Projected:{" "}
+        {projected.toFixed(1)} | Needs: {remaining.toFixed(1)} | Needs Per Game:{" "}
+        {perGameNeeded.toFixed(1)}{" "}
+      </span>
       <div className="progress-bar">
         <div
           style={{
