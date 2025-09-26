@@ -83,24 +83,27 @@ app.get("/api/v1/players/nfl", async (req, res) => {
 
 app.get("/api/espn/scores/:week", async (req, res) => {
   const { week } = req.params;
-  try {
-    const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}`;
-    const response = await fetch(url);
-    if (!response.ok)
-      throw new Error(`ESPN scoreboard error: ${response.status}`);
-    const data = (await response.json()) as EspnScoreboardResponse;
+  const maxWeek = Number(week);
+  const gamesPlayed: Record<string, number> = {};
 
-    // Build a map: team -> games played
-    const gamesPlayed: Record<string, number> = {};
-    data.events.forEach((game: any) => {
-      const home = game.competitions[0].competitors[0].team.abbreviation;
-      const away = game.competitions[0].competitors[1].team.abbreviation;
-      const status = game.status.type.name; // "STATUS_SCHEDULED", "STATUS_FINAL"
-      if (status === "STATUS_FINAL") {
-        gamesPlayed[home] = (gamesPlayed[home] || 0) + 1;
-        gamesPlayed[away] = (gamesPlayed[away] || 0) + 1;
-      }
-    });
+  try {
+    for (let w = 1; w <= maxWeek; w++) {
+      const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${w}`;
+      const response = await fetch(url);
+      if (!response.ok)
+        throw new Error(`ESPN scoreboard error: ${response.status}`);
+      const data = (await response.json()) as EspnScoreboardResponse;
+
+      data.events.forEach((game: any) => {
+        const home = game.competitions[0].competitors[0].team.abbreviation;
+        const away = game.competitions[0].competitors[1].team.abbreviation;
+        const status = game.status.type.name;
+        if (status === "STATUS_FINAL") {
+          gamesPlayed[home] = (gamesPlayed[home] || 0) + 1;
+          gamesPlayed[away] = (gamesPlayed[away] || 0) + 1;
+        }
+      });
+    }
 
     res.json(gamesPlayed);
   } catch (err) {

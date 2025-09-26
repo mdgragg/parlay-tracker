@@ -32,6 +32,10 @@ interface SleeperState {
   [key: string]: any;
 }
 
+interface Scoreboard {
+  [team: string]: number;
+}
+
 const LegItem: React.FC<LegItemProps> = ({
   playerId,
   statType,
@@ -42,46 +46,119 @@ const LegItem: React.FC<LegItemProps> = ({
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState<number>(1);
+  const [scoreboard, setScoreboard] = useState<Scoreboard>({});
+  const playerInfo = sleeperToEspn[playerId];
 
-  // Fetch current week from Sleeper API
+  // // Fetch current week from Sleeper API
+  // useEffect(() => {
+  //   async function fetchWeek() {
+  //     try {
+  //       const res = await fetch("https://api.sleeper.app/v1/state/nfl");
+  //       if (!res.ok) throw new Error("Failed to fetch NFL state");
+  //       const data: SleeperState = await res.json();
+
+  //       // Use display_week if available
+  //       setCurrentWeek(data.display_week || data.week || 1);
+  //     } catch (err) {
+  //       console.error("Failed to fetch week from Sleeper", err);
+  //       setCurrentWeek(1);
+  //     }
+  //   }
+  //   fetchWeek();
+  // }, []);
+
+  //   useEffect(() => {
+  //   async function fetchScoreboard() {
+  //     try {
+  //       const res = await fetch(`https://parlay-tracker.onrender.com/api/espn/scores/${currentWeek}`);
+  //       const data: Scoreboard = await res.json();
+  //       setScoreboard(data);
+  //     } catch (err) {
+  //       console.error(err);
+  //     }
+  //   }
+  //   if (currentWeek) fetchScoreboard();
+  // }, [currentWeek]);
+
+  // // Fetch player stats from ESPN API (with caching)
+  // useEffect(() => {
+  //   async function fetchStats() {
+  //     const key = `espn-player-${playerId}`;
+
+  //     await fetchWithCache(key, async () => {
+  //       try {
+  //         const espnId = sleeperToEspn[playerId];
+  //         if (!espnId)
+  //           throw new Error(`No ESPN mapping for player ${playerId}`);
+
+  //         const res = await fetch(
+  //           `https://parlay-tracker.onrender.com/api/espn/player/${espnId}`
+  //         );
+  //         if (!res.ok) throw new Error("API error");
+
+  //         const data = await res.json();
+  //         setStats(data.stats);
+  //         return data.stats;
+  //       } catch (err) {
+  //         console.error(err);
+  //         setStats(null);
+  //         return null;
+  //       } finally {
+  //         setLoading(false);
+  //       }
+  //     });
+  //   }
+
+  //   fetchStats();
+
+  //   const handler = () => fetchStats();
+  //   window.addEventListener("refreshLegs", handler);
+  //   return () => window.removeEventListener("refreshLegs", handler);
+  // }, [playerId, playerName]);
+
+  // Fetch current week
   useEffect(() => {
     async function fetchWeek() {
       try {
         const res = await fetch("https://api.sleeper.app/v1/state/nfl");
-        if (!res.ok) throw new Error("Failed to fetch NFL state");
         const data: SleeperState = await res.json();
-
-        // Use display_week if available
         setCurrentWeek(data.display_week || data.week || 1);
       } catch (err) {
-        console.error("Failed to fetch week from Sleeper", err);
         setCurrentWeek(1);
       }
     }
     fetchWeek();
   }, []);
 
-  // Fetch player stats from ESPN API (with caching)
+  // Fetch scoreboard for this week
+  useEffect(() => {
+    async function fetchScoreboard() {
+      try {
+        const res = await fetch(
+          `https://parlay-tracker.onrender.com/api/espn/scores/${currentWeek}`
+        );
+        const data: Scoreboard = await res.json();
+        setScoreboard(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    if (currentWeek) fetchScoreboard();
+  }, [currentWeek]);
+
+  // Fetch player stats
   useEffect(() => {
     async function fetchStats() {
       const key = `espn-player-${playerId}`;
-
       await fetchWithCache(key, async () => {
         try {
-          const espnId = sleeperToEspn[playerId];
-          if (!espnId)
-            throw new Error(`No ESPN mapping for player ${playerId}`);
-
           const res = await fetch(
-            `https://parlay-tracker.onrender.com/api/espn/player/${espnId}`
+            `https://parlay-tracker.onrender.com/api/espn/player/${playerInfo.espnId}`
           );
-          if (!res.ok) throw new Error("API error");
-
           const data = await res.json();
           setStats(data.stats);
           return data.stats;
-        } catch (err) {
-          console.error(err);
+        } catch {
           setStats(null);
           return null;
         } finally {
@@ -89,13 +166,8 @@ const LegItem: React.FC<LegItemProps> = ({
         }
       });
     }
-
     fetchStats();
-
-    const handler = () => fetchStats();
-    window.addEventListener("refreshLegs", handler);
-    return () => window.removeEventListener("refreshLegs", handler);
-  }, [playerId, playerName]);
+  }, [playerId]);
 
   if (loading) return <div>Loading stats...</div>;
   if (!stats) return <div>Stats unavailable</div>;
@@ -118,27 +190,15 @@ const LegItem: React.FC<LegItemProps> = ({
     }
   })();
 
-  // Determine games played
-  let gamesPlayed = currentWeek;
-  if (currentTotal === 0) gamesPlayed = 0;
-  if (currentTotal > 0) {
-    const perGameGuess = currentTotal / currentWeek;
-    if (perGameGuess < (targetValue / 17) * 0.5) {
-      gamesPlayed = currentWeek - 1;
-    }
-  }
-
-  const perWeek = currentTotal / Math.max(gamesPlayed, 1);
-  const projected = perWeek * 17;
-
-  // NEW: remaining to target & per-game needed
+  const gamesPlayed = scoreboard[playerInfo.team] ?? 0;
+  const perGame = currentTotal / Math.max(gamesPlayed, 1);
+  const projected = perGame * 17;
   const remaining = Math.max(targetValue - currentTotal, 0);
-  const gamesLeft = Math.max(17 - currentWeek, 0);
+  const gamesLeft = Math.max(17 - gamesPlayed, 0);
   const perGameNeeded = gamesLeft > 0 ? remaining / gamesLeft : remaining;
 
   const percentCurrent = Math.min(100, (currentTotal / targetValue) * 100);
   const percentOfTarget = Math.min(100, (projected / targetValue) * 100);
-
   const barColor =
     percentOfTarget >= 100
       ? "#3be489"
@@ -150,13 +210,18 @@ const LegItem: React.FC<LegItemProps> = ({
     <div className="leg-container">
       <h4 style={{ fontWeight: 600 }}>{playerName ?? playerId}</h4>
       <span className="stats">
-        Target: {targetValue} {statType === "rushingYards" && "Rushing Yards"}
+        <b>
+          {" "}
+          {targetValue} {statType === "rushingYards" && "Rushing Yards"}{" "}
+        </b>
         {statType === "receivingYards" && "Receiving Yards"}
         {statType === "passingYards" && "Passing Yards"}
         {statType === "rushingTD" && "Rushing TDs"}
-        {statType === "receivingTD" && "Receiving TDs"} | Current:{" "}
-        {currentTotal} | Projected: {projected.toFixed(1)} | Needs:{" "}
-        {remaining.toFixed(1)} | Needs per games : {perGameNeeded.toFixed(1)}
+        {statType === "receivingTD" && "Receiving TDs"}| Current: {currentTotal}{" "}
+        | Games Played: {gamesPlayed} | Current Per Game:{" "}
+        {gamesPlayed > 0 ? (currentTotal / gamesPlayed).toFixed(1) : "0.0"}|
+        Projected: {projected.toFixed(1)}| Needs: {remaining.toFixed(1)}| Needs
+        per games : {perGameNeeded.toFixed(1)}
       </span>{" "}
       <div className="progress-bar">
         <div
