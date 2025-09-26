@@ -143,15 +143,15 @@ const LegItem: React.FC<LegItemProps> = ({
       <h4 style={{ fontWeight: 600 }}>{playerName ?? playerId}</h4>
       <span className="stats">
         <b>
-          {statType === "rushingYards" && "Rushing Yards"}
+          {targetValue} {statType === "rushingYards" && "Rushing Yards"}
           {statType === "receivingYards" && "Receiving Yards"}
           {statType === "passingYards" && "Passing Yards"}
           {statType === "rushingTD" && "Rushing TDs"}
-          {statType === "receivingTD" && "Receiving TDs"} ({targetValue})
-        </b>
+          {statType === "receivingTD" && "Receiving TDs"}
+        </b>{" "}
         | Current: {currentTotal} | Games Played: {gamesPlayed} | Current Per
         Game: {gamesPlayed > 0 ? perGame.toFixed(1) : "0.0"} | Projected:{" "}
-        {projected.toFixed(1)} | Needs: {remaining.toFixed(1)} | Needs Per Game:{" "}
+        {projected.toFixed(0)} | Needs: {remaining.toFixed(0)} | Needs Per Game:{" "}
         {perGameNeeded.toFixed(1)}{" "}
       </span>
       <div className="progress-bar">
