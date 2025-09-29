@@ -132,7 +132,6 @@ app.get("/api/espn/scores/:week", async (req, res) => {
 });
 
 // --- Pre-warm logic ---
-// Extract just the ESPN IDs from your parlay list
 const PREWARM_IDS = Object.values(sleeperToEspn).map((p) => p.espnId);
 
 // Run every 10 minutes
