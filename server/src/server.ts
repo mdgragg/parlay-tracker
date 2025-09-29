@@ -1,6 +1,7 @@
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
+import { sleeperToEspn } from "./sleeperToEspn";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,12 +57,11 @@ app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-// --- ESPN Player Stats ---
 app.get("/api/espn/player/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-    const data: EspnStatsResponse = await fetchWithCache(url, 5 * 60_000); // cache 5 min
+    const data: EspnStatsResponse = await fetchWithCache(url, 5 * 60_000);
 
     const splitCategory = data.splitCategories?.find((c) => c.name === "split");
     const allSplits = splitCategory?.splits?.find(
@@ -83,11 +83,10 @@ app.get("/api/espn/player/:id", async (req, res) => {
   }
 });
 
-// --- All NFL players from Sleeper ---
 app.get("/api/v1/players/nfl", async (_req, res) => {
   try {
     const url = "https://api.sleeper.app/v1/players/nfl";
-    const data = await fetchWithCache(url, 60 * 60_000); // cache 1 hour
+    const data = await fetchWithCache(url, 60 * 60_000);
     res.json(data);
   } catch (err) {
     console.error("Failed to fetch players from Sleeper", err);
@@ -95,7 +94,6 @@ app.get("/api/v1/players/nfl", async (_req, res) => {
   }
 });
 
-// --- ESPN Scores by week (parallelized) ---
 app.get("/api/espn/scores/:week", async (req, res) => {
   const { week } = req.params;
   const maxWeek = Number(week);
@@ -110,9 +108,8 @@ app.get("/api/espn/scores/:week", async (req, res) => {
         }`
     );
 
-    // fetch all weeks in parallel
     const jsons: EspnScoreboardResponse[] = await Promise.all(
-      urls.map((url) => fetchWithCache(url, 5 * 60_000)) // cache 5 min
+      urls.map((url) => fetchWithCache(url, 5 * 60_000))
     );
 
     jsons.forEach((data) => {
@@ -133,6 +130,26 @@ app.get("/api/espn/scores/:week", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch scores" });
   }
 });
+
+// --- Pre-warm logic ---
+// Extract just the ESPN IDs from your parlay list
+const PREWARM_IDS = Object.values(sleeperToEspn).map((p) => p.espnId);
+
+// Run every 10 minutes
+setInterval(async () => {
+  console.log("Pre-warming cache for players...");
+  try {
+    await Promise.all(
+      PREWARM_IDS.map(async (id) => {
+        const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
+        await fetchWithCache(url, 5 * 60_000); // same TTL as normal route
+      })
+    );
+    console.log("Pre-warm complete");
+  } catch (err) {
+    console.error("Pre-warm error:", err);
+  }
+}, 10 * 60_000); // 10 minutes
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
