@@ -1,7 +1,7 @@
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
-import { sleeperToEspn } from "./sleeperToEspn";
+import { sleeperToEspn } from "./sleeperToEspn.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
