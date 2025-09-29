@@ -148,7 +148,7 @@ setInterval(async () => {
   } catch (err) {
     console.error("Pre-warm error:", err);
   }
-}, 10 * 60_000); // 10 minutes
+}, 10 * 60_000);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
