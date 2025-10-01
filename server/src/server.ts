@@ -134,21 +134,39 @@ app.get("/api/espn/scores/:week", async (req, res) => {
 // --- Pre-warm logic ---
 const PREWARM_IDS = Object.values(sleeperToEspn).map((p) => p.espnId);
 
-// Run every 10 minutes
-setInterval(async () => {
+// helper: chunk into groups of 25 to avoid hammering ESPN
+function chunk<T>(arr: T[], size: number): T[][] {
+  return arr.reduce(
+    (acc, _, i) => (i % size ? acc : [...acc, arr.slice(i, i + size)]),
+    [] as T[][]
+  );
+}
+
+async function prewarm() {
   console.log("Pre-warming cache for players...");
+  const playerChunks = chunk(PREWARM_IDS, 25);
+
   try {
-    await Promise.all(
-      PREWARM_IDS.map(async (id) => {
-        const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-        await fetchWithCache(url, 5 * 60_000); // same TTL as normal route
-      })
-    );
+    for (const group of playerChunks) {
+      await Promise.all(
+        group.map(async (id) => {
+          const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
+          await fetchWithCache(url, 30 * 60_000); // bump TTL to 30 minutes
+        })
+      );
+      await new Promise((r) => setTimeout(r, 2000)); // pause a bit between chunks
+    }
     console.log("Pre-warm complete");
   } catch (err) {
     console.error("Pre-warm error:", err);
   }
-}, 10 * 60_000);
+}
+
+// Run on boot
+prewarm();
+
+// Run every 10 minutes
+setInterval(prewarm, 10 * 60_000);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
