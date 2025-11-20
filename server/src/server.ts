@@ -42,9 +42,10 @@ app.get("/api/espn/player/:id", async (req, res) => {
     const splitCategory = data.splitCategories?.find(
       (c: any) => c.name === "split"
     );
-    const allSplits = splitCategory?.splits?.find(
-      (s: any) => s.displayName === "All Splits"
-    );
+    const allSplits =
+      splitCategory?.splits?.find((s: any) => s.displayName === "All Splits") ||
+      splitCategory?.splits?.[0];
+    console.log("ESPN API response:", JSON.stringify(data, null, 2));
 
     if (!allSplits)
       return res.status(404).json({ error: "No 'All Splits' stats found" });
@@ -54,8 +55,9 @@ app.get("/api/espn/player/:id", async (req, res) => {
     data.names.forEach((name: string, i: number) => {
       let value = allSplits.stats[i];
       // Convert numeric-looking strings to numbers (remove commas)
-      if (typeof value === "string" && /^[\d,.-]+$/.test(value)) {
-        value = Number(value.replace(/,/g, ""));
+      if (typeof value === "string") {
+        const cleaned = value.replace(/,/g, "");
+        value = isNaN(Number(cleaned)) ? 0 : Number(cleaned);
       }
       stats[name] = value;
     });
@@ -117,6 +119,7 @@ app.get("/api/espn/scores/:week", async (req, res) => {
 
 // --- Pre-warm cache ---
 const PREWARM_IDS = Object.values(sleeperToEspn).map((p) => p.espnId);
+console.log(PREWARM_IDS);
 
 function chunk<T>(arr: T[], size: number): T[][] {
   return arr.reduce(
