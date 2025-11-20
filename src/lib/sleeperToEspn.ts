@@ -28,6 +28,17 @@ export const sleeperToEspn: Record<string, { espnId: string; team: string }> = {
   "3294": { espnId: "2577417", team: "DAL" }, // Dak
   "4217": { espnId: "3040151", team: "SF" }, // Kittle
   "5967": { espnId: "3916148", team: "TEN" }, // Pollard
+
+  "4943": { espnId: "3912547", team: "SEA" }, // Darnold
+  "421": { espnId: "12483", team: "LAR" }, // Stafford
+  "3163": { espnId: "3046779", team: "DET" }, // Goff
+  // "": { espnId: "", team: "PHI" }, // D. Smith
+  "12512": { espnId: "4431299", team: "CLE" }, // Judkins
+  // "": { espnId: "", team: "LAR" }, // Kyren
+  "3198": { espnId: "3043078", team: "BAL" }, // Henry
+  // "": { espnId: "", team: "LAR" }, // Puka
+  // "": { espnId: "", team: "DAL" }, // CD
+  // "": { espnId: "", team: "HOU" }, // Nico
 };
 
 // https://api.sleeper.app/v1/players/nfl

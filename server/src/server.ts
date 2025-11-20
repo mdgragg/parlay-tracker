@@ -71,10 +71,20 @@ app.get("/api/espn/player/:id", async (req, res) => {
     if (!allSplits)
       return res.status(404).json({ error: "No 'All Splits' stats found" });
 
-    const stats: Record<string, string | number> = {};
+    const rawStats: Record<string, string | number> = {};
     data.names.forEach((name, i) => {
-      stats[name] = allSplits.stats[i];
+      rawStats[name] = allSplits.stats[i];
     });
+
+    // Map ESPN keys → clean keys your frontend expects
+    const stats = {
+      passingYards: rawStats.athPassingYards ?? 0,
+      passingTouchdowns: rawStats.athPassingTouchdowns ?? 0,
+      rushingYards: rawStats.rusYds ?? 0,
+      rushingTouchdowns: rawStats.rusTD ?? 0,
+      receivingYards: rawStats.recYds ?? 0,
+      receivingTouchdowns: rawStats.recTD ?? 0,
+    };
 
     res.json({ playerId: id, stats });
   } catch (err) {
