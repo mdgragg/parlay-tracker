@@ -71,40 +71,32 @@ app.get("/api/espn/player/:id", async (req, res) => {
     if (!allSplits)
       return res.status(404).json({ error: "No 'All Splits' stats found" });
 
-    // const stats: Record<string, string | number> = {};
-    //     data.names.forEach((name, i) => {
-    //       stats[name] = allSplits.stats[i];
-    //     });
-
-    const rawStats: Record<string, string | number> = {};
+    // Keep all stats as-is
+    const stats: Record<string, string | number> = {};
     data.names.forEach((name, i) => {
-      rawStats[name] = allSplits.stats[i];
+      stats[name] = allSplits.stats[i];
     });
 
-    // Map ESPN keys → clean keys your frontend expects
-    // const stats = {
-    //   passingYards: rawStats.athPassingYards ?? 0,
-    //   passingTouchdowns: rawStats.athPassingTouchdowns ?? 0,
-    //   rushingYards: rawStats.rusYds ?? 0,
-    //   rushingTouchdowns: rawStats.rusTD ?? 0,
-    //   receivingYards: rawStats.recYds ?? 0,
-    //   receivingTouchdowns: rawStats.recTD ?? 0,
-    // };
-    return res.json({
-      DEBUG_rawKeys: Object.keys(rawStats),
-      DEBUG_sampleValues: rawStats,
-    });
+    // Fix passingYards to be a proper number for frontend use
+    const passingYardsRaw = stats.passingYards as string;
+    const passingYardsNumeric = Number(passingYardsRaw.replace(/,/g, ""));
+
+    // Build frontend-compatible shape
+    const frontendStats = {
+      passingYards: isNaN(passingYardsNumeric) ? 0 : passingYardsNumeric,
+      passingTouchdowns: stats.passingTouchdowns ?? 0,
+      rushingYards: stats.rushingYards ?? 0,
+      rushingTouchdowns: stats.rushingTouchdowns ?? 0,
+      receivingYards: stats.receivingYards ?? 0,
+      receivingTouchdowns: stats.receivingTouchdowns ?? 0,
+    };
+
+    res.json({ playerId: id, stats: frontendStats });
   } catch (err) {
     console.error("Error fetching ESPN stats:", err);
-    return res.status(500).json({ error: "Failed to fetch ESPN stats" });
+    res.status(500).json({ error: "Failed to fetch ESPN stats" });
   }
 });
-//     res.json({ playerId: id, stats });
-//   } catch (err) {
-//     console.error("Error fetching ESPN stats:", err);
-//     res.status(500).json({ error: "Failed to fetch ESPN stats" });
-//   }
-// });
 
 app.get("/api/v1/players/nfl", async (_req, res) => {
   try {
