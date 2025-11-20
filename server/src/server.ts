@@ -18,42 +18,18 @@ const cache: Record<string, CacheItem> = {};
 
 async function fetchWithCache(url: string, ttlMs = 60_000) {
   const cached = cache[url];
-  if (cached && cached.expiry > Date.now()) {
-    return cached.data;
-  }
+  if (cached && cached.expiry > Date.now()) return cached.data;
+
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Fetch error ${response.status}`);
   const data = await response.json();
+
   cache[url] = { data, expiry: Date.now() + ttlMs };
   return data;
 }
 
-// --- Interfaces ---
-interface EspnStatsResponse {
-  splitCategories?: Array<{
-    name: string;
-    displayName: string;
-    splits?: Array<{
-      displayName: string;
-      stats: Array<string | number>;
-    }>;
-  }>;
-  names: string[];
-}
-
-interface EspnScoreboardResponse {
-  events: Array<{
-    competitions: Array<{
-      competitors: Array<{
-        team: { abbreviation: string };
-      }>;
-    }>;
-    status: { type: { name: string } };
-  }>;
-}
-
 // --- Routes ---
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("Backend is running");
 });
 
@@ -61,37 +37,30 @@ app.get("/api/espn/player/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-    const data: EspnStatsResponse = await fetchWithCache(url, 5 * 60_000);
+    const data = await fetchWithCache(url, 5 * 60_000);
 
-    const splitCategory = data.splitCategories?.find((c) => c.name === "split");
+    const splitCategory = data.splitCategories?.find(
+      (c: any) => c.name === "split"
+    );
     const allSplits = splitCategory?.splits?.find(
-      (s) => s.displayName === "All Splits"
+      (s: any) => s.displayName === "All Splits"
     );
 
     if (!allSplits)
       return res.status(404).json({ error: "No 'All Splits' stats found" });
 
-    // Keep all stats as-is
+    // Build stats object dynamically
     const stats: Record<string, string | number> = {};
-    data.names.forEach((name, i) => {
-      stats[name] = allSplits.stats[i];
+    data.names.forEach((name: string, i: number) => {
+      let value = allSplits.stats[i];
+      // Convert numeric-looking strings to numbers (remove commas)
+      if (typeof value === "string" && /^[\d,.-]+$/.test(value)) {
+        value = Number(value.replace(/,/g, ""));
+      }
+      stats[name] = value;
     });
 
-    // Fix passingYards to be a proper number for frontend use
-    const passingYardsRaw = stats.passingYards as string;
-    const passingYardsNumeric = Number(passingYardsRaw.replace(/,/g, ""));
-
-    // Build frontend-compatible shape
-    const frontendStats = {
-      passingYards: isNaN(passingYardsNumeric) ? 0 : passingYardsNumeric,
-      passingTouchdowns: stats.passingTouchdowns ?? 0,
-      rushingYards: stats.rushingYards ?? 0,
-      rushingTouchdowns: stats.rushingTouchdowns ?? 0,
-      receivingYards: stats.receivingYards ?? 0,
-      receivingTouchdowns: stats.receivingTouchdowns ?? 0,
-    };
-
-    res.json({ playerId: id, stats: frontendStats });
+    res.json({ playerId: id, stats });
   } catch (err) {
     console.error("Error fetching ESPN stats:", err);
     res.status(500).json({ error: "Failed to fetch ESPN stats" });
@@ -123,11 +92,11 @@ app.get("/api/espn/scores/:week", async (req, res) => {
         }`
     );
 
-    const jsons: EspnScoreboardResponse[] = await Promise.all(
+    const jsons = await Promise.all(
       urls.map((url) => fetchWithCache(url, 5 * 60_000))
     );
 
-    jsons.forEach((data) => {
+    jsons.forEach((data: any) => {
       data.events.forEach((game: any) => {
         const home = game.competitions[0].competitors[0].team.abbreviation;
         const away = game.competitions[0].competitors[1].team.abbreviation;
@@ -146,10 +115,9 @@ app.get("/api/espn/scores/:week", async (req, res) => {
   }
 });
 
-// --- Pre-warm logic ---
+// --- Pre-warm cache ---
 const PREWARM_IDS = Object.values(sleeperToEspn).map((p) => p.espnId);
 
-// helper: chunk into groups of 25 to avoid hammering ESPN
 function chunk<T>(arr: T[], size: number): T[][] {
   return arr.reduce(
     (acc, _, i) => (i % size ? acc : [...acc, arr.slice(i, i + size)]),
@@ -160,16 +128,15 @@ function chunk<T>(arr: T[], size: number): T[][] {
 async function prewarm() {
   console.log("Pre-warming cache for players...");
   const playerChunks = chunk(PREWARM_IDS, 25);
-
   try {
     for (const group of playerChunks) {
       await Promise.all(
         group.map(async (id) => {
           const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-          await fetchWithCache(url, 30 * 60_000); // bump TTL to 30 minutes
+          await fetchWithCache(url, 30 * 60_000);
         })
       );
-      await new Promise((r) => setTimeout(r, 2000)); // pause a bit between chunks
+      await new Promise((r) => setTimeout(r, 2000));
     }
     console.log("Pre-warm complete");
   } catch (err) {
@@ -177,10 +144,7 @@ async function prewarm() {
   }
 }
 
-// Run on boot
 prewarm();
-
-// Run every 10 minutes
 setInterval(prewarm, 10 * 60_000);
 
 app.listen(PORT, () => {
