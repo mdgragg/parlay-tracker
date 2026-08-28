@@ -61,7 +61,7 @@ export default function ParlayCard({
     // Save order in localStorage
     localStorage.setItem(
       `parlayLegOrder-${parlay.id}`,
-      JSON.stringify(newLegs.map((l) => ({ id: l.id, order: l.order ?? 0 })))
+      JSON.stringify(newLegs.map((l) => ({ id: l.id, order: l.order ?? 0 }))),
     );
   };
 
@@ -78,22 +78,52 @@ export default function ParlayCard({
     });
   };
 
+  const handleCancelEdit = () => {
+    setNameInput(parlay.name);
+    setEditingName(false);
+  };
+
   return (
     <div className="p-4 border rounded parlay-card space-y-3">
-      <div className="parlay-btns">
+      <div className="parlay-btns" style={{ textAlign: "center" }}>
         {editingName ? (
-          <input
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            onBlur={handleNameBlur}
-            onKeyDown={(e) => e.key === "Enter" && handleNameBlur()}
-            className="text-lg font-semibold border px-2 py-1 rounded"
-            autoFocus
-          />
+          <div className="title-edit-group">
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleNameBlur()}
+              className="title-input"
+              style={{ fontSize: "1.125rem", fontWeight: 600 }}
+              autoFocus
+            />
+            <div className="title-edit-buttons">
+              <button
+                type="button"
+                onClick={handleNameBlur}
+                className="btn-save-title"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="btn-cancel-title"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">{parlay.name}</h2>
-            <span onClick={() => setEditingName(true)} className="edit-btn">
+            <h2 className="text-lg parlay-title font-semibold">
+              {parlay.name}
+            </h2>
+            <span
+              onClick={() => setEditingName(true)}
+              className="edit-btn"
+              style={{ cursor: "pointer" }}
+            >
               Edit
             </span>
           </>
@@ -102,19 +132,26 @@ export default function ParlayCard({
         <span
           onClick={() => setActiveParlayId(isActive ? null : parlay.id)}
           className="add-btn"
+          style={{ cursor: "pointer" }}
         >
           +
         </span>
-        <span onClick={() => onDelete(parlay.id)} className="delete-btn">
+        <span
+          onClick={() => onDelete(parlay.id)}
+          className="delete-btn"
+          style={{ cursor: "pointer" }}
+        >
           -
         </span>
       </div>
+
+      {isActive && <AddLegForm parlay={parlay} onLegAdded={handleAddLeg} />}
 
       {parlayLegs.length === 0 ? (
         <div className="text-sm text-gray-500">No legs yet.</div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId={parlay.id}>
+          <Droppable droppableId={parlay.id} isDropDisabled={!editingName}>
             {(provided) => (
               <div
                 ref={provided.innerRef}
@@ -122,15 +159,24 @@ export default function ParlayCard({
                 className="space-y-2"
               >
                 {parlayLegs.map((leg, index) => (
-                  <Draggable key={leg.id} draggableId={leg.id} index={index}>
+                  <Draggable
+                    key={leg.id}
+                    draggableId={leg.id}
+                    index={index}
+                    isDragDisabled={!editingName}
+                  >
                     {(dragProvided, snapshot) => (
                       <div
                         ref={dragProvided.innerRef}
                         {...dragProvided.draggableProps}
-                        {...dragProvided.dragHandleProps}
+                        {...(editingName ? dragProvided.dragHandleProps : {})}
                         className={`flex gap-3 p-2 rounded border ${
                           snapshot.isDragging ? "bg-gray-100" : ""
                         }`}
+                        style={{
+                          ...dragProvided.draggableProps.style,
+                          cursor: editingName ? "grab" : "default",
+                        }}
                       >
                         <div className="flex-1">
                           <LegItem
@@ -141,12 +187,6 @@ export default function ParlayCard({
                             onRemove={() => handleRemoveLeg(leg.id)}
                           />
                         </div>
-                        {/* <button
-                          onClick={() => handleRemoveLeg(leg.id)}
-                          className="delete"
-                        >
-                          Remove
-                        </button> */}
                       </div>
                     )}
                   </Draggable>
@@ -157,8 +197,6 @@ export default function ParlayCard({
           </Droppable>
         </DragDropContext>
       )}
-
-      {isActive && <AddLegForm parlay={parlay} onLegAdded={handleAddLeg} />}
     </div>
   );
 }

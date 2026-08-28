@@ -35,7 +35,7 @@ export default function AddLegForm({ parlay, onLegAdded }: Props) {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightedIndex(
-        (prev) => (prev - 1 + filtered.length) % filtered.length
+        (prev) => (prev - 1 + filtered.length) % filtered.length,
       );
     } else if (e.key === "Enter") {
       e.preventDefault();
@@ -87,97 +87,126 @@ export default function AddLegForm({ parlay, onLegAdded }: Props) {
 
   return (
     <div className="p-4 border rounded bg-gray-50 space-y-3">
-      {/* Search UI */}
-      {!selected ? (
-        <div className="relative">
-          <input
-            placeholder="Search Player"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="player-dropdown"
-          />
-          {search.length > 0 && filtered.length > 0 && (
-            <div className="absolute z-10 w-full bg-white border rounded mt-1 max-h-40 overflow-y-auto shadow">
-              {filtered.map((p, idx) => (
-                <div
-                  key={p.player_id}
-                  onClick={() => {
-                    setSelected(p);
-                    setSearch("");
-                  }}
-                  className={`flex items-center gap-2 p-2 cursor-pointer ${
-                    idx === highlightedIndex
-                      ? "bg-gray-200"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {p.headshot_url && (
-                    <img
-                      src={p.headshot_url}
-                      alt={p.full_name}
-                      className="w-6 h-6 rounded-full"
-                    />
-                  )}
-                  <span>
-                    {p.full_name} ({p.position}
-                    {p.team ? ` - ${p.team}` : ""})
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          {selected.headshot_url && (
-            <img
-              src={selected.headshot_url}
-              alt={selected.full_name}
-              className="w-8 h-8 rounded-full"
+      {/* Search, Dropdown, Target, and Add Button - one line on desktop, 3 rows on mobile */}
+      <div className="addleg-row">
+        {!selected && (
+          <div
+            className="player-dropdown player-slot"
+            style={{ position: "relative" }}
+          >
+            <input
+              type="search"
+              placeholder="Search Player"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="player-dropdown-input"
+              style={{ width: "100%", margin: 0, boxSizing: "border-box" }}
             />
-          )}
-          <span>{selected.full_name}</span>
+            {search.length > 0 && filtered.length > 0 && (
+              <div className="player-dropdown-list">
+                {filtered.map((p, idx) => (
+                  <div
+                    key={p.player_id}
+                    onClick={() => {
+                      setSelected(p);
+                      setSearch("");
+                    }}
+                    className={`player-dropdown-item ${
+                      idx === highlightedIndex ? "selected" : ""
+                    }`}
+                  >
+                    {p.headshot_url && (
+                      <img
+                        src={p.headshot_url}
+                        alt={p.full_name}
+                        className="w-6 h-6 rounded-full"
+                      />
+                    )}
+                    <span>
+                      {p.full_name} ({p.position}
+                      {p.team ? ` - ${p.team}` : ""})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {selected && (
+          <div className="player-slot player-slot-box">
+            {selected.headshot_url && (
+              <img
+                src={selected.headshot_url}
+                alt={selected.full_name}
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                }}
+              />
+            )}
+            <span
+              style={{
+                fontWeight: 600,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+              }}
+            >
+              {selected.full_name}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="btn-change"
+              style={{ flexShrink: 0 }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        <div className="addleg-target-group">
+          <select
+            value={statType}
+            onChange={(e) => setStatType(e.target.value as StatType)}
+            style={{ minWidth: "130px", flex: "0 0 auto" }}
+          >
+            <option value="rushingYards">Rushing Yards</option>
+            <option value="receivingYards">Receiving Yards</option>
+            <option value="passingYards">Passing Yards</option>
+            <option value="rushingTD">Rushing TDs</option>
+            <option value="receivingTD">Receiving TDs</option>
+            <option value="passingTD">Passing TDs</option>
+            <option value="receptions">Catches</option>
+          </select>
+
+          <input
+            type="number"
+            placeholder="Target"
+            value={target}
+            onChange={(e) => setTarget(Number(e.target.value))}
+            style={{ minWidth: "80px", flex: "0 0 auto" }}
+          />
+
           <button
             type="button"
-            onClick={() => setSelected(null)}
-            className="text-xs text-red-500"
+            onClick={handleAdd}
+            className="btn-centered"
+            disabled={!selected || !target}
+            style={{
+              display: "inline-block",
+              margin: "0",
+              padding: "0.5rem 1rem",
+              flex: "0 0 auto",
+            }}
           >
-            ✕ Change
+            Add
           </button>
         </div>
-      )}
-
-      {/* Stat + Target */}
-      <div className="flex gap-2 items-center">
-        <select
-          value={statType}
-          onChange={(e) => setStatType(e.target.value as StatType)}
-          className="border px-2 py-1 rounded"
-        >
-          <option value="rushingYards">Rushing Yards</option>
-          <option value="receivingYards">Receiving Yards</option>
-          <option value="passingYards">Passing Yards</option>
-          <option value="rushingTD">Rushing TDs</option>
-          <option value="receivingTD">Receiving TDs</option>
-        </select>
-
-        <input
-          type="number"
-          placeholder="Target"
-          value={target}
-          onChange={(e) => setTarget(Number(e.target.value))}
-          className="border px-2 py-1 rounded w-24"
-        />
-
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="px-3 py-1 bg-blue-500 text-white rounded"
-          disabled={!selected || !target}
-        >
-          Add
-        </button>
       </div>
     </div>
   );

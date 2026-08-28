@@ -120,13 +120,10 @@ export default function ParlayManager() {
         setActiveParlayId={setActiveParlayId}
         onDelete={handleDeleteParlay}
         onUpdateParlay={handleUpdateParlay}
-        setParlays={setParlays} // 👈 pass this for drag reorder
+        setParlays={setParlays}
       />
-      <button
-        onClick={handleAddParlay}
-        className="px-3 py-1 bg-green-500 text-white rounded"
-      >
-        Add Parlay
+      <button onClick={handleAddParlay} className="btn-centered">
+        + Add Parlay
       </button>
     </div>
   );

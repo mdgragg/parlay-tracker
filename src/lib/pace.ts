@@ -12,6 +12,10 @@ function getCurrentValue(stats: any, statType: string) {
       return Number(stats.rushingTouchdowns ?? 0);
     case "receivingTD":
       return Number(stats.receivingTouchdowns ?? 0);
+    case "passingTD":
+      return Number(stats.passingTouchdowns ?? 0);
+    case "receptions":
+      return Number(stats.receptions ?? 0);
     default:
       return 0;
   }

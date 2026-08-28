@@ -11,7 +11,9 @@ export type StatType =
   | "receivingYards"
   | "passingYards"
   | "rushingTD"
-  | "receivingTD";
+  | "receivingTD"
+  | "passingTD"
+  | "receptions";
 
 export interface Leg {
   id: string;

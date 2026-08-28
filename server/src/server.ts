@@ -16,16 +16,48 @@ interface CacheItem {
 }
 const cache: Record<string, CacheItem> = {};
 
+// site.api.espn.com rejects node-fetch's default "node-fetch" User-Agent with a
+// 403, which silently zeroed out games-played. Send a normal UA on every call.
+const FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; parlay-tracker)",
+  Accept: "application/json",
+};
+
 async function fetchWithCache(url: string, ttlMs = 60_000) {
   const cached = cache[url];
   if (cached && cached.expiry > Date.now()) return cached.data;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: FETCH_HEADERS });
   if (!response.ok) throw new Error(`Fetch error ${response.status}`);
   const data = await response.json();
 
   cache[url] = { data, expiry: Date.now() + ttlMs };
   return data;
+}
+
+// ESPN's splits endpoint silently defaults to the *previous* completed season
+// when no ?season= is given, so the season always has to be passed explicitly.
+// Sleeper is the source of truth for which season we're in.
+const SLEEPER_STATE_URL = "https://api.sleeper.app/v1/state/nfl";
+
+function fallbackSeason() {
+  // An NFL season is labelled by the year it starts, so Jan/Feb still belong
+  // to the previous year's season.
+  const now = new Date();
+  return String(now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear());
+}
+
+async function getCurrentSeason(): Promise<string> {
+  try {
+    const state = await fetchWithCache(SLEEPER_STATE_URL, 10 * 60_000);
+    return String(state.season ?? state.league_season ?? fallbackSeason());
+  } catch {
+    return fallbackSeason();
+  }
+}
+
+function splitsUrl(espnId: string, season: string) {
+  return `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${espnId}/splits?season=${season}`;
 }
 
 // --- Routes ---
@@ -36,8 +68,8 @@ app.get("/", (_req, res) => {
 app.get("/api/espn/player/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-    const data = await fetchWithCache(url, 5 * 60_000);
+    const season = String(req.query.season ?? (await getCurrentSeason()));
+    const data = await fetchWithCache(splitsUrl(id, season), 5 * 60_000);
 
     const splitCategory = data.splitCategories?.find(
       (c: any) => c.name === "split"
@@ -45,10 +77,12 @@ app.get("/api/espn/player/:id", async (req, res) => {
     const allSplits =
       splitCategory?.splits?.find((s: any) => s.displayName === "All Splits") ||
       splitCategory?.splits?.[0];
-    console.log("ESPN API response:", JSON.stringify(data, null, 2));
 
+    // Before week 1 ESPN still returns the stat *names* for the player's
+    // position, but no split rows. That's "season hasn't started", not an
+    // error, so report it as such and let the client render zeroes.
     if (!allSplits)
-      return res.status(404).json({ error: "No 'All Splits' stats found" });
+      return res.json({ playerId: id, season, seasonStarted: false, stats: {} });
 
     // Build stats object dynamically
     const stats: Record<string, string | number> = {};
@@ -62,7 +96,7 @@ app.get("/api/espn/player/:id", async (req, res) => {
       stats[name] = value;
     });
 
-    res.json({ playerId: id, stats });
+    res.json({ playerId: id, season, seasonStarted: true, stats });
   } catch (err) {
     console.error("Error fetching ESPN stats:", err);
     res.status(500).json({ error: "Failed to fetch ESPN stats" });
@@ -130,13 +164,13 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 async function prewarm() {
   console.log("Pre-warming cache for players...");
+  const season = await getCurrentSeason();
   const playerChunks = chunk(PREWARM_IDS, 25);
   try {
     for (const group of playerChunks) {
       await Promise.all(
         group.map(async (id) => {
-          const url = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/splits`;
-          await fetchWithCache(url, 30 * 60_000);
+          await fetchWithCache(splitsUrl(id, season), 30 * 60_000);
         })
       );
       await new Promise((r) => setTimeout(r, 2000));

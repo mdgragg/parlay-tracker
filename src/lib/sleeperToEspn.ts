@@ -13,8 +13,8 @@ export const sleeperToEspn: Record<string, { espnId: string; team: string }> = {
   "11584": { espnId: "4596448", team: "TB" }, // Bucky Irving
   "12527": { espnId: "4890973", team: "LV" }, // Jeanty
   "11631": { espnId: "4432773", team: "JAX" }, // Brian Thomas jr
-  "8151": { espnId: "4567048", team: "SEA" }, // Walker
-  "7526": { espnId: "4372016", team: "MIA" }, // Waddle
+  "8151": { espnId: "4567048", team: "KC" }, // Walker
+  "7526": { espnId: "4372016", team: "DEN" }, // Waddle
   "8146": { espnId: "4569618", team: "NYJ" }, // Garrett Wilson
   "8137": { espnId: "4426354", team: "DAL" }, // Pickens
   "8148": { espnId: "4426388", team: "DET" }, // Jamo
@@ -22,7 +22,7 @@ export const sleeperToEspn: Record<string, { espnId: string; team: string }> = {
   "9226": { espnId: "4429160", team: "MIA" }, // Achane
   "9221": { espnId: "4429795", team: "DET" }, // Gibbs
   "4035": { espnId: "3054850", team: "NO" }, // Kamara
-  "7591": { espnId: "4362887", team: "NYJ" }, // Fields
+  "7591": { espnId: "4362887", team: "KC" }, // Fields
   "11620": { espnId: "4431299", team: "CHI" }, // Odunze
   "2133": { espnId: "16800", team: "LAR" }, // Adams
   "3294": { espnId: "2577417", team: "DAL" }, // Dak
