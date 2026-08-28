@@ -30,6 +30,7 @@ export interface Leg {
 export interface Parlay {
   id: string;
   name: string;
+  description?: string;
   order?: number;
   legs: Leg[];
 }

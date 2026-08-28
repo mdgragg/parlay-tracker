@@ -23,6 +23,9 @@ export default function ParlayCard({
 }: Props) {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(parlay.name);
+  const [descriptionInput, setDescriptionInput] = useState(
+    parlay.description ?? "",
+  );
 
   const parlayLegs = useMemo(() => {
     const savedOrder = localStorage.getItem(`parlayLegOrder-${parlay.id}`);
@@ -42,9 +45,18 @@ export default function ParlayCard({
     return legsCopy;
   }, [parlay.legs, parlay.id]);
 
-  const handleNameBlur = () => {
-    if (nameInput.trim() && nameInput !== parlay.name) {
-      onUpdateParlay({ ...parlay, name: nameInput }); // call the generic update function
+  const handleSaveEdits = () => {
+    const trimmedName = nameInput.trim();
+    const trimmedDescription = descriptionInput.trim();
+    const nameChanged = trimmedName && trimmedName !== parlay.name;
+    const descriptionChanged = trimmedDescription !== (parlay.description ?? "");
+
+    if (nameChanged || descriptionChanged) {
+      onUpdateParlay({
+        ...parlay,
+        name: trimmedName || parlay.name,
+        description: trimmedDescription,
+      });
     }
     setEditingName(false);
   };
@@ -78,8 +90,9 @@ export default function ParlayCard({
     });
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelEdits = () => {
     setNameInput(parlay.name);
+    setDescriptionInput(parlay.description ?? "");
     setEditingName(false);
   };
 
@@ -87,27 +100,36 @@ export default function ParlayCard({
     <div className="p-4 border rounded parlay-card space-y-3">
       <div className="parlay-btns" style={{ textAlign: "center" }}>
         {editingName ? (
-          <div className="title-edit-group">
+          <div className="title-edit-group" style={{ flexDirection: "column" }}>
             <input
               type="text"
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleNameBlur()}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveEdits()}
               className="title-input"
               style={{ fontSize: "1.125rem", fontWeight: 600 }}
               autoFocus
             />
+            <input
+              type="text"
+              value={descriptionInput}
+              onChange={(e) => setDescriptionInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveEdits()}
+              className="title-input"
+              placeholder="Add a note..."
+              style={{ fontSize: "0.9rem", fontWeight: 400, margin: "0.5rem auto" }}
+            />
             <div className="title-edit-buttons">
               <button
                 type="button"
-                onClick={handleNameBlur}
+                onClick={handleSaveEdits}
                 className="btn-save-title"
               >
                 Save
               </button>
               <button
                 type="button"
-                onClick={handleCancelEdit}
+                onClick={handleCancelEdits}
                 className="btn-cancel-title"
               >
                 Cancel
@@ -144,6 +166,10 @@ export default function ParlayCard({
           -
         </span>
       </div>
+
+      {!editingName && parlay.description && (
+        <p className="parlay-subtitle">{parlay.description}</p>
+      )}
 
       {isActive && <AddLegForm parlay={parlay} onLegAdded={handleAddLeg} />}
 

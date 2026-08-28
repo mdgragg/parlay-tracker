@@ -56,7 +56,11 @@ export async function replaceParlay(
 export async function updateParlay(parlay: Parlay): Promise<void> {
   const { error } = await supabase
     .from("parlays")
-    .update({ name: parlay.name, order_index: parlay.order })
+    .update({
+      name: parlay.name,
+      description: parlay.description ?? null,
+      order_index: parlay.order,
+    })
     .eq("id", parlay.id);
   if (error) throw error;
 
@@ -156,6 +160,7 @@ export async function loadParlays(): Promise<Record<string, Parlay>> {
     mapped[p.id] = {
       id: p.id,
       name: p.name,
+      description: p.description ?? undefined,
       order: p.order_index,
       legs: legs
         .filter((l) => l.parlay_id === p.id)
