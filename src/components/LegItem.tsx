@@ -9,6 +9,8 @@ interface LegItemProps {
   targetValue: number;
   playerName?: string;
   onRemove?: () => void;
+  legId?: string;
+  onStatusChange?: (legId: string, percentage: number, color: string) => void;
 }
 
 interface PlayerStats {
@@ -61,6 +63,8 @@ const LegItem: React.FC<LegItemProps> = ({
   targetValue,
   playerName,
   onRemove,
+  legId,
+  onStatusChange,
 }) => {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [seasonStarted, setSeasonStarted] = useState(true);
@@ -226,6 +230,12 @@ const LegItem: React.FC<LegItemProps> = ({
       : percentOfTarget >= 90
       ? "#eab308"
       : "#dc2626";
+
+  useEffect(() => {
+    if (legId && onStatusChange && showPace) {
+      onStatusChange(legId, percentOfTarget, barColor);
+    }
+  }, [legId, onStatusChange, showPace, percentOfTarget, barColor]);
 
   return (
     <div className="leg-container">
