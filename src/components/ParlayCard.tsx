@@ -53,7 +53,8 @@ export default function ParlayCard({
     const trimmedName = nameInput.trim();
     const trimmedDescription = descriptionInput.trim();
     const nameChanged = trimmedName && trimmedName !== parlay.name;
-    const descriptionChanged = trimmedDescription !== (parlay.description ?? "");
+    const descriptionChanged =
+      trimmedDescription !== (parlay.description ?? "");
 
     if (nameChanged || descriptionChanged) {
       onUpdateParlay({
@@ -103,7 +104,7 @@ export default function ParlayCard({
   const handleLegStatusChange = (
     legId: string,
     percentage: number,
-    color: string
+    color: string,
   ) => {
     setLegStatuses((prev) => {
       const newStatuses = new Map(prev);
@@ -118,7 +119,7 @@ export default function ParlayCard({
     }
 
     const percentages = Array.from(legStatuses.values()).map(
-      (s) => s.percentage
+      (s) => s.percentage,
     );
     const colors = Array.from(legStatuses.values()).map((s) => s.color);
 
@@ -160,7 +161,11 @@ export default function ParlayCard({
               onKeyDown={(e) => e.key === "Enter" && handleSaveEdits()}
               className="title-input"
               placeholder="Add a note..."
-              style={{ fontSize: "0.9rem", fontWeight: 400, margin: "0.5rem auto" }}
+              style={{
+                fontSize: "0.9rem",
+                fontWeight: 400,
+                margin: "0.5rem auto",
+              }}
             />
             <div className="title-edit-buttons">
               <button
@@ -224,36 +229,17 @@ export default function ParlayCard({
               marginBottom: "0.5rem",
             }}
           >
-            <div style={{ fontSize: "0.875rem" }}>
+            {/* <div style={{ fontSize: "0.875rem" }}>
               <span style={{ fontWeight: 600 }}>Parlay Progress:</span>
               <span style={{ marginLeft: "0.5rem" }}>
                 {parlayStatus.percentage.toFixed(0)}%
               </span>
-            </div>
-            <button
-              onClick={() => setLegsExpanded(!legsExpanded)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "1.25rem",
-                padding: "0.25rem 0.5rem",
-                display: "flex",
-                alignItems: "center",
-                color: "#666",
-              }}
-              title={legsExpanded ? "Collapse legs" : "Expand legs"}
-            >
-              {legsExpanded ? "▲" : "▼"}
-            </button>
+            </div> */}
           </div>
           <div
             className="progress-bar"
             style={{
-              height: "0.75rem",
-              backgroundColor: "#e5e7eb",
-              borderRadius: "0.375rem",
-              overflow: "hidden",
+              marginBottom: "15px",
             }}
           >
             <div
@@ -267,6 +253,27 @@ export default function ParlayCard({
           </div>
         </div>
       )}
+
+      <button
+        onClick={() => setLegsExpanded(!legsExpanded)}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "0.75rem",
+          paddingBottom: "1rem",
+          display: "flex",
+          alignItems: "center",
+          color: "#FFFFFF",
+          opacity: "0.75",
+          textAlign: "center",
+          fontStyle: "italic",
+          margin: "auto",
+        }}
+        title={legsExpanded ? "Collapse legs" : "Expand legs"}
+      >
+        {legsExpanded ? "Hide Parlay ↑" : "Show Parlay ↓"}
+      </button>
 
       {isActive && <AddLegForm parlay={parlay} onLegAdded={handleAddLeg} />}
 
@@ -294,7 +301,9 @@ export default function ParlayCard({
                           <div
                             ref={dragProvided.innerRef}
                             {...dragProvided.draggableProps}
-                            {...(editingName ? dragProvided.dragHandleProps : {})}
+                            {...(editingName
+                              ? dragProvided.dragHandleProps
+                              : {})}
                             className={`flex gap-3 p-2 rounded border ${
                               snapshot.isDragging ? "bg-gray-100" : ""
                             }`}

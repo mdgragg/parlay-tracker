@@ -187,6 +187,29 @@ const LegItem: React.FC<LegItemProps> = ({
     };
   }, [playerId, playerInfo]);
 
+  const currentTotal = stats ? Number(stats[STAT_FIELDS[statType]] ?? 0) : 0;
+  const gamesPlayed = playerInfo ? (scoreboard[playerInfo.team] ?? 0) : 0;
+  const perGame = gamesPlayed > 0 ? currentTotal / gamesPlayed : 0;
+  const projected = perGame * 17;
+  const remaining = Math.max(targetValue - currentTotal, 0);
+  const gamesLeft = Math.max(17 - gamesPlayed, 0);
+  const perGameNeeded = gamesLeft > 0 ? remaining / gamesLeft : remaining;
+
+  const percentCurrent = Math.min(100, (currentTotal / targetValue) * 100);
+  const percentOfTarget = Math.min(100, (projected / targetValue) * 100);
+  const barColor =
+    percentOfTarget >= 100
+      ? "#3be489"
+      : percentOfTarget >= 90
+      ? "#eab308"
+      : "#dc2626";
+
+  useEffect(() => {
+    if (legId && onStatusChange && showPace) {
+      onStatusChange(legId, percentOfTarget, barColor);
+    }
+  }, [legId, onStatusChange, showPace, percentOfTarget, barColor]);
+
   if (loading)
     return (
       <div className="leg-container">
@@ -209,33 +232,6 @@ const LegItem: React.FC<LegItemProps> = ({
         )}
       </div>
     );
-
-  // Current total for the stat type
-  const currentTotal = Number(stats[STAT_FIELDS[statType]] ?? 0);
-
-  const gamesPlayed = scoreboard[playerInfo.team] ?? 0;
-  // With zero games there is nothing to extrapolate from — dividing by a
-  // floor of 1 would report a full season's worth of stats as a per-game rate.
-  const perGame = gamesPlayed > 0 ? currentTotal / gamesPlayed : 0;
-  const projected = perGame * 17;
-  const remaining = Math.max(targetValue - currentTotal, 0);
-  const gamesLeft = Math.max(17 - gamesPlayed, 0);
-  const perGameNeeded = gamesLeft > 0 ? remaining / gamesLeft : remaining;
-
-  const percentCurrent = Math.min(100, (currentTotal / targetValue) * 100);
-  const percentOfTarget = Math.min(100, (projected / targetValue) * 100);
-  const barColor =
-    percentOfTarget >= 100
-      ? "#3be489"
-      : percentOfTarget >= 90
-      ? "#eab308"
-      : "#dc2626";
-
-  useEffect(() => {
-    if (legId && onStatusChange && showPace) {
-      onStatusChange(legId, percentOfTarget, barColor);
-    }
-  }, [legId, onStatusChange, showPace, percentOfTarget, barColor]);
 
   return (
     <div className="leg-container">
