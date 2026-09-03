@@ -16,7 +16,7 @@ export const sleeperToEspn: Record<string, { espnId: string; team: string }> = {
   "9997": { espnId: "4429615", team: "BAL" }, // Flowers
 
   "12517": { espnId: "4723086", team: "CHI" }, // Loveland
-  "13524": { espnId: "4262921", team: "MIN" }, // Jefferson
+  "6794": { espnId: "4262921", team: "MIN" }, // Jefferson
   "2216": { espnId: "16737", team: "SF" }, // Evans
   "4217": { espnId: "3040151", team: "SF" }, // Kittle
 
