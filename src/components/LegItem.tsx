@@ -205,10 +205,10 @@ const LegItem: React.FC<LegItemProps> = ({
       : "#dc2626";
 
   useEffect(() => {
-    if (legId && onStatusChange && showPace) {
-      onStatusChange(legId, percentOfTarget, barColor);
+    if (legId && onStatusChange) {
+      onStatusChange(legId, percentCurrent, barColor);
     }
-  }, [legId, onStatusChange, showPace, percentOfTarget, barColor]);
+  }, [legId, onStatusChange, percentCurrent, barColor]);
 
   if (loading)
     return (
