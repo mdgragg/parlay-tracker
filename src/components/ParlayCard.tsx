@@ -277,64 +277,62 @@ export default function ParlayCard({
 
       {isActive && <AddLegForm parlay={parlay} onLegAdded={handleAddLeg} />}
 
-      {legsExpanded && (
-        <>
-          {parlayLegs.length === 0 ? (
-            <div className="text-sm text-gray-500">No legs yet.</div>
-          ) : (
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId={parlay.id} isDropDisabled={!editingName}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-2"
-                  >
-                    {parlayLegs.map((leg, index) => (
-                      <Draggable
-                        key={leg.id}
-                        draggableId={leg.id}
-                        index={index}
-                        isDragDisabled={!editingName}
-                      >
-                        {(dragProvided, snapshot) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            {...(editingName
-                              ? dragProvided.dragHandleProps
-                              : {})}
-                            className={`flex gap-3 p-2 rounded border ${
-                              snapshot.isDragging ? "bg-gray-100" : ""
-                            }`}
-                            style={{
-                              ...dragProvided.draggableProps.style,
-                              cursor: editingName ? "grab" : "default",
-                            }}
-                          >
-                            <div className="flex-1">
-                              <LegItem
-                                playerId={leg.playerId}
-                                statType={leg.statType}
-                                targetValue={leg.target}
-                                playerName={leg.playerName}
-                                onRemove={() => handleRemoveLeg(leg.id)}
-                                legId={leg.id}
-                                onStatusChange={handleLegStatusChange}
-                              />
-                            </div>
+      <div style={{ display: legsExpanded ? "block" : "none" }}>
+        {parlayLegs.length === 0 ? (
+          <div className="text-sm text-gray-500">No legs yet.</div>
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId={parlay.id} isDropDisabled={!editingName}>
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="space-y-2"
+                >
+                  {parlayLegs.map((leg, index) => (
+                    <Draggable
+                      key={leg.id}
+                      draggableId={leg.id}
+                      index={index}
+                      isDragDisabled={!editingName}
+                    >
+                      {(dragProvided, snapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...(editingName
+                            ? dragProvided.dragHandleProps
+                            : {})}
+                          className={`flex gap-3 p-2 rounded border ${
+                            snapshot.isDragging ? "bg-gray-100" : ""
+                          }`}
+                          style={{
+                            ...dragProvided.draggableProps.style,
+                            cursor: editingName ? "grab" : "default",
+                          }}
+                        >
+                          <div className="flex-1">
+                            <LegItem
+                              playerId={leg.playerId}
+                              statType={leg.statType}
+                              targetValue={leg.target}
+                              playerName={leg.playerName}
+                              onRemove={() => handleRemoveLeg(leg.id)}
+                              legId={leg.id}
+                              onStatusChange={handleLegStatusChange}
+                            />
                           </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
-        </>
-      )}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        )}
+      </div>
     </div>
   );
 }
