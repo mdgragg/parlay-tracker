@@ -41,6 +41,8 @@ export const sleeperToEspn: Record<string, { espnId: string; team: string }> = {
   "8112": { espnId: "4426502", team: "ATL" }, // Drake
   "13287": { espnId: "4870808", team: "ARI" }, // Love
   "8130": { espnId: "4361307", team: "ARI" }, // McBride
+
+  "13298": { espnId: "4870653", team: "CLE" }, // KC
 };
 
 // https://api.sleeper.app/v1/players/nfl
